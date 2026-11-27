@@ -32,10 +32,11 @@ input[type=range]{width:100%;accent-color:#06B6D4;height:1.4rem}
     <div class="min-w-0"><div class="font-extrabold tracking-[.18em] text-lg leading-none">ORIGO <span class="text-cyan-400">3D</span></div>
     <div class="hidden sm:block text-[11px] text-slate-400 mt-1">Interactive 3D Anatomy &amp; Mechanics</div></div>
   </div>
-  <div class="flex gap-1 p-1 rounded-xl bg-white/5" id="models">
-    <button class="btn on" data-m="engine">⚙ Mesin Piston</button>
-    <button class="btn" data-m="solar">☀ Panel Surya</button>
-  </div>
+  <select id="models" class="btn max-w-[10.5rem] sm:max-w-none" style="background-color:#0f172a;color:#67e8f9" aria-label="Pilih objek 3D">
+    <optgroup label="Otomotif &amp; Energi"><option value="engine">⚙ Mesin Piston</option><option value="solar">☀ Panel Surya</option></optgroup>
+    <optgroup label="Elektromekanik"><option value="motor">🔩 Dinamo (Motor Listrik)</option><option value="fan">🌀 Kipas Angin</option><option value="washer">🧺 Mesin Cuci</option></optgroup>
+    <optgroup label="Peralatan Rumah"><option value="iron">♨ Setrika</option><option value="blender">🥤 Blender</option><option value="lamp">💡 Lampu Meja</option></optgroup>
+  </select>
 </header>
 
 <div id="alert" class="hidden fixed z-20 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-xl rounded-xl px-3 py-2 text-sm flex items-center gap-2" style="top:calc(env(safe-area-inset-top,0px) + 4.3rem);background:rgba(127,29,29,.8);border:1px solid #ef4444;backdrop-filter:blur(8px)">
@@ -214,7 +215,122 @@ function buildSolar(){
 }
 
 // ---------- STATE & UI ----------
-const MODELS={engine:buildEngine,solar:buildSolar};
+// ---------- KATALOG BARU: ELEKTROMEKANIK & PERALATAN RUMAH ----------
+const link=(a,b,r,mat)=>{const d=b.clone().sub(a),m=mesh(new THREE.CylinderGeometry(r,r,d.length(),12),mat);m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(V(0,1,0),d.normalize());return m;};
+const runner=D=>{let cur=1,ang=0;return(t,dt)=>{let f=1,st=0;broken.forEach(id=>{const d=D[id];if(d){f=Math.min(f,d.s);st|=d.st||0}});const tg=f*(st?(.25+.75*Math.pow(Math.max(0,Math.sin(t*4.5)),2)):1);cur+=(tg-cur)*Math.min(1,dt*5);ang+=cur*dt;return{ang,cur}}};
+const STEEL=()=>M(0x9aa5b5,.9,.25),GLASS=(c,o)=>M(c,.1,.15,0,0,{transparent:true,opacity:o,side:THREE.DoubleSide,depthWrite:false});
+const openCyl=(r1,r2,h,mat,x=0,y=0,z=0)=>{const m=mesh(new THREE.CylinderGeometry(r1,r2,h,32,1,true),mat,x,y,z);m.castShadow=false;return m;};
+
+function buildMotor(){
+ const root=new THREE.Group(),parts=[];const P=(...a)=>addPart(root,parts,...a);const Y=1.4;
+ const run=runner({body:{s:.5,st:1},fins:{s:.65},shaft:{s:0},feet:{s:.7,st:1},terminal:{s:0}});
+ const body=grp(0,Y,0);const sh=cylZ(.95,2.2,GLASS(0x3b82f6,.35),0,0,0,40);sh.castShadow=false;body.add(sh);
+ [-1.15,1.15].forEach(z=>body.add(cylZ(.97,.12,M(0x2563eb,.6,.35),0,0,z,40)));
+ P('body','Bodi Silinder (Stator)',body,V(0,2.3,0),I('Rumah pelindung yang menahan kumparan stator (magnet tetap) dan melindungi bagian dalam motor.','Kumparan stator dialiri listrik dan membentuk medan magnet yang menarik rotor sehingga berputar.','Isolasi kumparan terbakar atau bodi terlalu panas: tenaga turun, bau gosong, motor bisa mati.','motor terlalu panas, tenaga turun'),true);
+ const fins=grp(0,Y,0);for(let i=-3;i<=3;i++)fins.add(mesh(new THREE.TorusGeometry(1.0,.07,8,40),STEEL(),0,0,i*.3));
+ P('fins','Sirip Pendingin',fins,V(2.2,1.4,0),I('Membuang panas dari bodi motor ke udara.','Sirip memperluas permukaan bodi sehingga panas lebih cepat terbawa udara atau kipas pendingin.','Sirip tersumbat debu: panas menumpuk, motor cepat panas dan mudah mati sendiri.','pendinginan terganggu, motor panas'));
+ const shaft=grp(0,Y,0);shaft.add(cylZ(.14,3.6,STEEL()),cylZ(.62,1.5,M(0x374151,.8,.4)),mesh(new THREE.BoxGeometry(.06,.06,.5),M(0xd4a73a,.9,.3),0,.14,1.5));
+ for(let k=0;k<8;k++){const a=k*Math.PI/4;shaft.add(mesh(new THREE.BoxGeometry(.2,.2,1.55),M(0xc2763a,.9,.3),Math.sin(a)*.68,Math.cos(a)*.68,0))}
+ P('shaft','Poros / Shaft (Rotor)',shaft,V(0,0,3),I('Poros yang berputar bersama rotor dan menyalurkan tenaga ke pulley, kipas, atau roda gigi.','Rotor tertarik medan magnet stator sehingga berputar; poros meneruskan putaran itu ke luar motor.','Poros bengkok atau macet: motor menderu tapi tidak berputar, getaran kuat.','poros macet, tidak berputar'));
+ const feet=grp(0,0,0);feet.add(mesh(new THREE.BoxGeometry(2.6,.18,1.9),M(0x475569,.7,.4),0,.09,0));
+ [-.75,.75].forEach(x=>{feet.add(mesh(new THREE.BoxGeometry(.5,.3,1.7),M(0x3b82f6,.5,.4),x,.33,0));[-.7,.7].forEach(z=>feet.add(mesh(new THREE.CylinderGeometry(.09,.09,.1,6),STEEL(),x*2,.23,z)))});
+ P('feet','Kaki Dudukan',feet,V(0,-.05,0),I('Dudukan yang menahan motor kokoh pada mesin atau lantai.','Baut pada kaki mengunci motor agar getaran dan torsi tidak menggeser posisinya.','Baut kendor atau kaki retak: motor bergetar hebat dan poros bisa tidak lurus.','dudukan longgar, motor bergetar'));
+ const term=grp(0,Y+1.2,0);term.add(mesh(new THREE.BoxGeometry(.9,.45,.8),M(0x1e293b,.5,.4)),mesh(new THREE.BoxGeometry(.7,.06,.6),M(0x64748b,.8,.3),0,.25,0));
+ [-.2,.2].forEach(x=>term.add(mesh(new THREE.CylinderGeometry(.07,.07,.2,10),M(0xd4a73a,.9,.3),x,.35,0)));
+ const lm=M(0x111111,0,.4,0x22ff88,2);const led=mesh(new THREE.SphereGeometry(.06,10,10),lm,0,0,.42);led.userData.noHl=1;term.add(led);
+ P('terminal','Terminal Box',term,V(0,3.3,0),I('Tempat sambungan kabel listrik ke kumparan motor.','Kabel fase dan netral dipasang pada terminal, lalu arus mengalir ke kumparan stator.','Sambungan longgar atau terbakar: motor tidak mendapat listrik dan mati total.','tidak ada listrik masuk, motor mati'));
+ return{root,parts,def:'terminal',cam:{pos:V(6,4,7),target:V(0,1.4,0)},update(t,dt){const s=run(t,dt);shaft.rotation.z=s.ang*9;lm.emissive.setHex(broken.size?0xff2222:0x22ff88);}};
+}
+
+function buildFan(){
+ const root=new THREE.Group(),parts=[];const P=(...a)=>addPart(root,parts,...a);const Y=2.6;
+ const run=runner({blades:{s:.2,st:1},neck:{s:0},grill:{s:.6,st:1},base:{s:.75,st:1}});
+ const wh=()=>M(0xe5e7eb,.1,.45);
+ const blades=grp(0,Y,.1);for(let k=0;k<3;k++){const b=new THREE.Group(),bl=mesh(new THREE.BoxGeometry(.5,1,.03),M(0x38bdf8,.2,.35),0,.65,0);bl.rotation.y=.35;b.add(bl);b.rotation.z=k*Math.PI*2/3;blades.add(b)}
+ blades.add(mesh(new THREE.SphereGeometry(.2,16,16),M(0x1f2937,.6,.3)));
+ P('blades','Baling-baling',blades,V(0,0,2),I('Mendorong udara sehingga terasa angin.','Bilah dimiringkan seperti sayap; saat berputar, udara terdorong ke depan.','Bilah patah atau tidak seimbang: angin lemah, kipas bergetar dan berisik.','baling-baling rusak, angin lemah'));
+ const grill=grp(0,Y,.55);[1.25,.85,.45].forEach(R=>grill.add(mesh(new THREE.TorusGeometry(R,.03,6,48),STEEL())));
+ for(let k=0;k<12;k++){const g=new THREE.Group(),s=mesh(new THREE.BoxGeometry(.025,1.25,.025),STEEL(),0,.62,0);s.castShadow=false;g.add(s);g.rotation.z=k*Math.PI/6;grill.add(g)}
+ P('grill','Grill / Pelindung',grill,V(0,0,3.8),I('Melindungi tangan dari baling-baling yang berputar sambil tetap meloloskan udara.','Kawat melingkar dan jari-jari membentuk jaring yang menahan benda masuk, tetapi udara tetap lewat.','Penyok atau terlepas: bisa menyangkut baling-baling dan berbahaya bagi tangan.','pelindung penyok, baling-baling tersangkut'),true);
+ const neck=grp(0,0,0);neck.add(mesh(new THREE.CylinderGeometry(.07,.07,1.6,12),STEEL(),0,1,0),cylZ(.38,.7,wh(),0,Y,-.35),link(V(0,1.8,0),V(0,Y-.2,-.4),.08,STEEL()));
+ P('neck','Leher / Tiang & Motor',neck,V(0,.6,-2),I('Menopang kepala kipas dan menyimpan motor penggerak.','Motor listrik di dalam rumahnya memutar baling-baling lewat poros, sedangkan tiang mengatur tinggi kipas.','Motor rusak: baling-baling tidak berputar sama sekali.','motor mati, kipas tidak berputar'));
+ const base=grp(0,0,0);base.add(mesh(new THREE.CylinderGeometry(.85,.95,.2,32),wh(),0,.1,0),mesh(new THREE.BoxGeometry(.3,.08,.2),M(0x1f2937,.4,.4),0,.22,.55));
+ P('base','Dasar / Kaki',base,V(0,0,0),I('Menjaga kipas tetap stabil agar tidak mudah terguling.','Alas yang lebar dan berat menurunkan titik berat kipas.','Dasar retak atau ringan: kipas goyang dan bisa jatuh.','dasar goyang, kipas tidak stabil'));
+ return{root,parts,def:'neck',cam:{pos:V(5,3.5,8),target:V(0,1.8,0)},update(t,dt){const s=run(t,dt);blades.rotation.z=s.ang*12;}};
+}
+
+function buildWasher(){
+ const root=new THREE.Group(),parts=[];const P=(...a)=>addPart(root,parts,...a);
+ const run=runner({body:{s:.7,st:1},door:{s:0},drum:{s:0},panel:{s:0}});
+ const body=grp(0,0,0);const bx=mesh(new THREE.BoxGeometry(2,2.4,1.8),GLASS(0xe2e8f0,.22),0,1.2,0);bx.castShadow=false;body.add(bx);
+ const ed=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(2,2.4,1.8)),new THREE.LineBasicMaterial({color:0x7dd3fc}));ed.position.y=1.2;body.add(ed);
+ [[-.85,-.75],[.85,-.75],[-.85,.75],[.85,.75]].forEach(([x,z])=>body.add(mesh(new THREE.CylinderGeometry(.1,.12,.1,12),M(0x1f2937,.3,.6),x,.05,z)));
+ P('body','Bodi Mesin',body,V(0,0,-3),I('Rangka luar yang menahan semua komponen dan meredam getaran.','Bodi menampung drum, motor, dan pipa air. Kaki karet meredam getaran saat drum berputar cepat.','Kaki tidak rata atau peredam rusak: mesin bergoyang keras dan berisik saat memeras.','mesin bergoyang hebat'),true);
+ const drum=grp(0,1.25,0);const dm=M(0xb8c2cf,.9,.3,0,0,{side:THREE.DoubleSide});const dg=new THREE.CylinderGeometry(.65,.65,1.4,32,1,true);dg.rotateX(Math.PI/2);drum.add(mesh(dg,dm));
+ for(let k=0;k<3;k++){const a=k*Math.PI*2/3;drum.add(mesh(new THREE.BoxGeometry(.1,.22,1.3),M(0x64748b,.8,.4),Math.sin(a)*.58,Math.cos(a)*.58,0))}drum.add(cylZ(.65,.06,dm,0,0,-.7));
+ P('drum','Tabung / Drum',drum,V(0,1.4,0),I('Wadah pakaian yang berputar untuk mencuci dan memeras.','Motor memutar drum; sirip di dalamnya mengangkat dan menjatuhkan pakaian sehingga kotoran terlepas.','Bearing rusak atau drum macet: cucian tidak berputar, tidak bersih, dan tidak terperas.','drum macet, cucian tidak berputar'));
+ const door=grp(-.7,1.25,1);door.add(mesh(new THREE.TorusGeometry(.62,.09,12,40),M(0xcbd5e1,.9,.25),.7,0,0),cylZ(.6,.05,GLASS(0x7dd3fc,.4),.7,0,0,32),mesh(new THREE.BoxGeometry(.1,.3,.1),M(0x475569,.6,.4),1.36,0,.05));
+ P('door','Pintu Depan',door,V(0,0,2.4),I('Pintu kedap air untuk memasukkan pakaian sekaligus mencegah kebocoran.','Karet pada pintu menyekat rapat; sensor pengunci mencegah mesin berputar saat pintu terbuka.','Pintu tidak terkunci atau karet rusak: air bocor dan mesin berhenti demi keamanan.','pintu terbuka, mesin berhenti'));
+ const panel=grp(0,2.18,.93);panel.add(mesh(new THREE.BoxGeometry(1.8,.36,.1),M(0x1e293b,.4,.4)));
+ const dpm=M(0x0b1220,.2,.3,0x06B6D4,.8);const dp=mesh(new THREE.BoxGeometry(.5,.16,.02),dpm,.45,0,.06);dp.userData.noHl=1;panel.add(dp);
+ const knob=cylZ(.13,.08,M(0xcbd5e1,.9,.3),-.55,0,.08);panel.add(knob,mesh(new THREE.SphereGeometry(.05,10,10),M(0xF97316,.4,.4),-.1,0,.06),mesh(new THREE.SphereGeometry(.05,10,10),M(0x22c55e,.4,.4),.05,0,.06));
+ P('panel','Panel Tombol / Putar',panel,V(0,1.5,1.8),I('Tempat memilih program cuci dan memulai mesin.','Knob dan tombol mengirim sinyal ke papan kontrol yang mengatur motor, pompa, dan pemanas air.','Panel rusak: mesin tidak bisa dinyalakan atau program berhenti di tengah jalan.','panel kontrol rusak, mesin tidak jalan'));
+ return{root,parts,def:'door',cam:{pos:V(5,3.5,7),target:V(0,1.2,0)},update(t,dt){const s=run(t,dt);drum.rotation.z=s.ang*9;knob.rotation.z=s.cur*.8;
+  const tr=broken.has('door')?-1.4:0;door.rotation.y+=(tr-door.rotation.y)*Math.min(1,dt*4);
+  dpm.emissive.setHex(broken.has('panel')?0xff2222:0x06B6D4);dpm.emissiveIntensity=.4+.6*s.cur;body.rotation.z=broken.has('body')?Math.sin(t*30)*.012*s.cur:0;}};
+}
+
+function buildIron(){
+ const root=new THREE.Group(),parts=[];const P=(...a)=>addPart(root,parts,...a);
+ const run=runner({element:{s:0},thermo:{s:.6,st:1},sole:{s:.7,st:1},handle:{s:.5,st:1}});
+ const sh=new THREE.Shape();sh.moveTo(-1.1,-.55);sh.lineTo(.5,-.55);sh.quadraticCurveTo(1.45,-.3,1.5,0);sh.quadraticCurveTo(1.45,.3,.5,.55);sh.lineTo(-1.1,.55);sh.closePath();
+ const sg=new THREE.ExtrudeGeometry(sh,{depth:.15,bevelEnabled:false});sg.rotateX(-Math.PI/2);
+ const sole=grp(0,0,0);sole.add(mesh(sg,M(0xc9d1db,1,.15)));
+ P('sole','Telapak (Soleplate)',sole,V(0,0,0),I('Permukaan logam panas yang meluruskan serat kain.','Panas dari elemen merambat ke telapak logam; permukaan yang halus meluncur di atas kain.','Telapak baret atau gosong: kain lengket dan kotor, panas tidak merata.','telapak rusak, panas tidak merata'));
+ const pts=[];for(let i=0;i<8;i++)pts.push(V(-.9+i*.3,.2,i%2?.33:-.33));
+ const elM=M(0x2a1a10,.3,.5,0xff5a00,0);const coil=mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,false,'centripetal'),80,.04,8),elM);coil.userData.noHl=1;const el=grp(0,0,0);el.add(coil);
+ P('element','Elemen Pemanas',el,V(0,1.1,0),I('Mengubah listrik menjadi panas.','Kawat berhambatan tinggi menjadi sangat panas saat dialiri arus dan memanaskan telapak.','Elemen putus: setrika tidak panas sama sekali.','elemen putus, setrika dingin'));
+ const th=grp(.75,.2,0);const dial=new THREE.Group();dial.add(mesh(new THREE.CylinderGeometry(.22,.22,.3,24),M(0x1e293b,.5,.4),0,.15,0),mesh(new THREE.BoxGeometry(.04,.05,.2),M(0xF97316,.4,.4),0,.32,.08));th.add(dial);
+ P('thermo','Termostat (Pengatur Suhu)',th,V(.5,2.6,0),I('Mengatur suhu agar sesuai jenis kain.','Lempeng bimetal melengkung saat panas dan memutus arus; saat dingin menyambung lagi.','Termostat rusak: suhu tak terkendali, kain bisa gosong dan berisiko kebakaran.','suhu tak terkendali, berbahaya'));
+ const hd=grp(0,0,0);[-.75,.25].forEach(x=>hd.add(mesh(new THREE.CylinderGeometry(.07,.07,.9,10),M(0x1e3a8a,.3,.5),x,.6,0)));
+ const gg=new THREE.CylinderGeometry(.13,.13,1.3,16);gg.rotateZ(Math.PI/2);hd.add(mesh(gg,M(0x1e3a8a,.3,.5),-.25,1.05,0));
+ hd.add(mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(-.85,.7,0),V(-1.8,.1,.4),V(-3,.05,1.1)],false,'centripetal'),30,.04,8),M(0x111827,.1,.7)));
+ P('handle','Gagang & Kabel',hd,V(-1.2,1.7,0),I('Pegangan yang aman serta jalur kabel listrik.','Plastik tahan panas melindungi tangan, sementara kabel menyalurkan listrik ke elemen pemanas.','Kabel terkelupas: arus putus-nyambung dengan risiko korsleting atau sengatan.','kabel bermasalah, daya kedip'));
+ return{root,parts,def:'element',cam:{pos:V(4.5,3.5,6),target:V(0,.6,0)},update(t,dt){const s=run(t,dt);elM.emissiveIntensity=s.cur*1.8;dial.rotation.y=s.cur*1.5;}};
+}
+
+function buildBlender(){
+ const root=new THREE.Group(),parts=[];const P=(...a)=>addPart(root,parts,...a);
+ const run=runner({blade:{s:.12,st:1},base:{s:0},knob:{s:0},jar:{s:.8,st:1}});
+ const jar=grp(0,2.35,0);jar.add(openCyl(.85,.6,2.2,GLASS(0xbae6fd,.25)),mesh(new THREE.CylinderGeometry(.74,.6,1,32),GLASS(0xf472b6,.8),0,-.6,0),mesh(new THREE.CylinderGeometry(.88,.88,.15,32),M(0x1e293b,.4,.5),0,1.15,0),mesh(new THREE.CylinderGeometry(.2,.2,.12,16),M(0x334155,.4,.5),0,1.28,0));
+ P('jar','Gelas Blender (Jar)',jar,V(0,2.4,0),I('Wadah bahan yang akan dihaluskan.','Bentuk meruncing mengarahkan bahan ke pisau di dasar; tutup mencegah percikan.','Retak atau tutup longgar: isi bocor dan bisa terciprat.','gelas retak, isi bocor'),true);
+ const blade=grp(0,1.4,0);blade.add(mesh(new THREE.CylinderGeometry(.1,.1,.3,12),STEEL(),0,.05,0));
+ for(let k=0;k<4;k++){const b=new THREE.Group(),m=mesh(new THREE.BoxGeometry(.9,.03,.2),STEEL(),.45,0,0);m.rotation.z=k%2?.35:-.35;b.add(m);b.rotation.y=k*Math.PI/2;blade.add(b)}
+ P('blade','Pisau (Blade)',blade,V(0,1.2,0),I('Memotong dan menghaluskan bahan.','Pisau berputar sangat cepat; sudut bilahnya menciptakan pusaran yang menarik bahan ke bawah.','Pisau tumpul atau macet: bahan tidak halus dan motor bekerja berat.','pisau tumpul atau macet'));
+ const base=grp(0,0,0);base.add(mesh(new THREE.CylinderGeometry(1,1.15,1.1,36),M(0x1f2937,.5,.35),0,.55,0),mesh(new THREE.CylinderGeometry(.9,.9,.2,36),M(0x94a3b8,.9,.3),0,1.2,0));
+ P('base','Motor & Dasar',base,V(0,0,0),I('Menyimpan motor listrik yang memutar pisau.','Motor memutar poros pada kopling di atas dasar; bodi yang berat menjaga blender tetap stabil.','Motor terbakar: blender tidak berputar sama sekali.','motor mati'));
+ const kg=new THREE.CylinderGeometry(.2,.2,.15,20);kg.rotateX(Math.PI/2);const knob=grp(0,.6,1.12);knob.add(mesh(kg,M(0xF97316,.5,.4)),mesh(new THREE.BoxGeometry(.04,.2,.04),M(0xffffff,.1,.5),0,.1,.1));
+ P('knob','Saklar / Tombol Kecepatan',knob,V(0,0,2.2),I('Menyalakan blender dan mengatur kecepatan.','Saklar memilih jalur arus ke motor; setiap posisi memberi kecepatan putar yang berbeda.','Saklar rusak: blender tidak mau menyala atau mati sendiri.','saklar rusak, tidak mau menyala'));
+ return{root,parts,def:'blade',cam:{pos:V(5,4,7),target:V(0,2,0)},update(t,dt){const s=run(t,dt);blade.rotation.y=s.ang*22;knob.rotation.z=s.cur*.9;}};
+}
+
+function buildLamp(){
+ const root=new THREE.Group(),parts=[];const P=(...a)=>addPart(root,parts,...a);
+ const run=runner({bulb:{s:0},base:{s:0},arm:{s:.6,st:1},shade:{s:.8,st:1}});
+ const dk=()=>M(0x2d3748,.8,.3),al=()=>M(0x94a3b8,.9,.3);
+ const base=grp(0,0,0);base.add(mesh(new THREE.CylinderGeometry(.8,.9,.15,32),dk(),0,.075,0),mesh(new THREE.CylinderGeometry(.09,.09,.18,12),M(0xF97316,.5,.4),.5,.22,.4));
+ P('base','Dasar & Saklar',base,V(0,0,2),I('Pemberat penopang lampu sekaligus tempat saklar.','Dasar yang berat menjaga lampu tetap tegak; saklar menyambung dan memutus arus listrik.','Saklar rusak: lampu tidak bisa dinyalakan.','saklar rusak, lampu mati'));
+ const arm=grp(0,0,0);arm.add(link(V(0,.15,0),V(-.6,1.9,0),.05,al()),mesh(new THREE.SphereGeometry(.1,12,12),al(),-.6,1.9,0),link(V(-.6,1.9,0),V(.8,2.3,0),.05,al()));
+ P('arm','Lengan Lampu',arm,V(-2,.6,0),I('Menopang kap dan mengatur arah cahaya.','Sendi pada lengan dapat ditekuk dan dikunci; kabel di dalamnya menyalurkan listrik.','Sendi kendor atau kabel dalam putus: lampu turun sendiri dan berkedip.','lengan kendor, lampu berkedip'));
+ const shade=grp(.9,2,0);shade.add(openCyl(.2,.65,.7,M(0xF97316,.4,.4,0,0,{side:THREE.DoubleSide})));
+ P('shade','Kap Lampu (Shade)',shade,V(0,2,0),I('Mengarahkan cahaya ke bawah dan mengurangi silau.','Bagian dalam kap memantulkan cahaya bohlam ke area kerja.','Kap penyok atau lepas: cahaya menyilaukan dan tidak terarah.','kap rusak, cahaya silau'),true);
+ const bm=M(0x222222,0,.3,0xffd37a,0);const bulb=grp(.9,1.8,0);const bb=mesh(new THREE.SphereGeometry(.2,20,20),bm);bb.userData.noHl=1;bb.castShadow=false;bulb.add(bb);
+ const sp=new THREE.SpotLight(0xffe2a8,0,14,.9,.6,1);sp.position.set(0,-.1,0);bulb.add(sp);sp.target.position.set(.9,0,0);root.add(sp.target);
+ P('bulb','Bohlam (Bulb)',bulb,V(1.9,.4,0),I('Sumber cahaya lampu.','Filamen atau LED mengubah listrik menjadi cahaya.','Bohlam putus: lampu mati padahal listrik tersedia.','bohlam putus, lampu mati'));
+ return{root,parts,def:'bulb',cam:{pos:V(5,4,7),target:V(0,1.4,0)},update(t,dt){const s=run(t,dt);bm.emissiveIntensity=.02+s.cur*2.6;sp.intensity=s.cur*2.5;}};
+}
+
+const MODELS={engine:buildEngine,solar:buildSolar,motor:buildMotor,fan:buildFan,washer:buildWasher,iron:buildIron,blender:buildBlender,lamp:buildLamp};
 const broken=new Set();let model=null,mode='normal',sel=null,hover=null,exT=0,exC=0;
 function setGoalToSel(){if(sel)tgtGoal=sel.base.clone().addScaledVector(sel.dir,exT).add(sel.obj.parent?sel.obj.parent.position:V(0,0,0));}
 function refreshUI(){
@@ -228,8 +344,8 @@ function setSel(p){sel=p;const s=$('side');if(!p){s.classList.remove('open');ret
  $('s-name').textContent=p.name;$('s-fn').textContent=p.info.fn;$('s-how').textContent=p.info.how;$('s-imp').textContent=p.info.imp;s.classList.add('open');s.scrollTop=0;refreshUI();setGoalToSel();}
 function setMode(m){mode=m;if(m==='normal')broken.clear();else if(!broken.size)broken.add(model.def);refreshUI();}
 function loadModel(k){if(model)scene.remove(model.root);broken.clear();mode='normal';hover=null;setSel(null);model=MODELS[k]();scene.add(model.root);
- posGoal=model.cam.pos.clone();tgtGoal=model.cam.target.clone();document.querySelectorAll('#models .btn').forEach(b=>b.classList.toggle('on',b.dataset.m===k));refreshUI();}
-document.querySelectorAll('#models .btn').forEach(b=>b.onclick=()=>loadModel(b.dataset.m));
+ posGoal=model.cam.pos.clone();tgtGoal=model.cam.target.clone();$('models').value=k;refreshUI();}
+$('models').onchange=e=>loadModel(e.target.value);
 $('m-normal').onclick=()=>setMode('normal');$('m-damage').onclick=()=>setMode('damage');
 $('fixall').onclick=()=>{broken.clear();mode='normal';refreshUI()};
 $('s-close').onclick=()=>setSel(null);
