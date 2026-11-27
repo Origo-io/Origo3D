@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ORIGO 3D — Interactive 3D Anatomy &amp; Mechanics</title>
+<meta name="color-scheme" content="dark">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+:root{color-scheme:dark;box-sizing:border-box}
+html,body{height:100%;margin:0;background:#0B0F19;color:#e2e8f0;overflow:hidden;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;touch-action:none}
+canvas{display:block;outline:none}
+.glass{background:rgba(15,23,42,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.09);box-shadow:0 10px 40px rgba(0,0,0,.45)}
+.btn{padding:.5rem .8rem;border-radius:.75rem;font-size:.8rem;font-weight:600;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#cbd5e1;transition:.2s;white-space:nowrap}
+.btn:hover{background:rgba(255,255,255,.12)}
+.btn.on{background:rgba(6,182,212,.2);border-color:#06B6D4;color:#67e8f9}
+.btn.warn{background:rgba(249,115,22,.22);border-color:#F97316;color:#fdba74}
+#side{transform:translateY(110%);transition:transform .35s ease}
+@media(min-width:768px){#side{transform:translateX(115%)}}
+#side.open{transform:none}
+#side h4{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:#22d3ee;margin:.9rem 0 .25rem;font-weight:700}
+#side p{font-size:.86rem;line-height:1.55;color:#cbd5e1;margin:0}
+input[type=range]{width:100%;accent-color:#06B6D4;height:1.4rem}
+</style></head>
+<body>
+<div id="stage" class="fixed inset-0"></div>
+
+<header class="fixed top-0 inset-x-0 z-20 glass flex items-center justify-between gap-2 px-3 sm:px-5 pb-2.5" style="padding-top:calc(env(safe-area-inset-top,0px) + .6rem);border-width:0 0 1px 0">
+  <div class="flex items-center gap-2.5 min-w-0">
+    <svg width="34" height="34" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="12" stroke="#06B6D4" stroke-width="2"/><path d="M17 5v24M5 17h24" stroke="#F97316" stroke-width="1.5"/><circle cx="17" cy="17" r="3.5" fill="#06B6D4"/></svg>
+    <div class="min-w-0"><div class="font-extrabold tracking-[.18em] text-lg leading-none">ORIGO <span class="text-cyan-400">3D</span></div>
+    <div class="hidden sm:block text-[11px] text-slate-400 mt-1">Interactive 3D Anatomy &amp; Mechanics</div></div>
+  </div>
+  <div class="flex gap-1 p-1 rounded-xl bg-white/5" id="models">
+    <button class="btn on" data-m="engine">⚙ Mesin Piston</button>
+    <button class="btn" data-m="solar">☀ Panel Surya</button>
+  </div>
+</header>
+
+<div id="alert" class="hidden fixed z-20 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-xl rounded-xl px-3 py-2 text-sm flex items-center gap-2" style="top:calc(env(safe-area-inset-top,0px) + 4.3rem);background:rgba(127,29,29,.8);border:1px solid #ef4444;backdrop-filter:blur(8px)">
+  <span class="text-lg">⚠</span><span id="alert-t" class="flex-1 leading-snug"></span>
+  <button id="fixall" class="btn !py-1 !px-2">Pulihkan</button>
+</div>
+<div id="hint" class="fixed z-10 left-4 text-xs text-slate-400 pointer-events-none hidden sm:block" style="top:calc(env(safe-area-inset-top,0px) + 4.6rem)">Seret = putar · Scroll = zoom · Klik komponen untuk detail</div>
+<div id="tip" class="fixed z-40 pointer-events-none hidden px-2.5 py-1 rounded-lg text-xs font-semibold" style="background:rgba(6,182,212,.92);color:#04212a"></div>
+
+<aside id="side" class="fixed z-30 glass rounded-t-2xl md:rounded-2xl bottom-0 inset-x-0 md:inset-x-auto md:right-4 md:w-[340px] max-h-[55vh] md:max-h-none overflow-y-auto p-4 md:top-20 md:bottom-44" style="touch-action:pan-y">
+  <div class="flex items-start justify-between gap-2">
+    <div><div class="text-[11px] text-slate-400">Komponen terpilih</div><div id="s-name" class="text-lg font-bold text-white leading-tight"></div></div>
+    <button id="s-close" class="btn !px-2.5" aria-label="Tutup">✕</button>
+  </div>
+  <div id="s-status" class="inline-block mt-2 text-[11px] font-bold px-2 py-0.5 rounded-full"></div>
+  <h4>Fungsi Utama</h4><p id="s-fn"></p>
+  <h4>Cara Kerja Singkat</h4><p id="s-how"></p>
+  <h4 style="color:#fb923c">Dampak Jika Rusak</h4><p id="s-imp"></p>
+  <button id="s-btn" class="btn warn w-full mt-4 !py-2.5"></button>
+</aside>
+
+<section class="fixed z-20 inset-x-0 mx-auto w-[calc(100%-1.5rem)] max-w-2xl glass rounded-2xl p-3 sm:p-4" style="bottom:calc(env(safe-area-inset-bottom,0px) + .75rem)">
+  <div class="flex items-center justify-between text-xs mb-1"><span class="font-semibold text-slate-300">Exploded View (Mode Bongkar)</span><span id="ex-v" class="text-cyan-300 font-bold">0%</span></div>
+  <input id="ex" type="range" min="0" max="100" value="0">
+  <div class="flex flex-wrap gap-2 mt-2">
+    <div class="flex gap-1 p-1 rounded-xl bg-white/5">
+      <button id="m-normal" class="btn on">Normal</button>
+      <button id="m-damage" class="btn">Simulasi Kerusakan</button>
+    </div>
+    <button id="reset" class="btn">⟲ Reset Kamera</button>
+    <button id="auto" class="btn">⟳ Auto-Rotate</button>
+  </div>
+</section>
+
+<script>
+const $=id=>document.getElementById(id);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x0B0F19);scene.fog=new THREE.Fog(0x0B0F19,22,48);
+const camera=new THREE.PerspectiveCamera(45,1,.1,100);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;renderer.outputEncoding=THREE.sRGBEncoding;
+$('stage').appendChild(renderer.domElement);
+
+// Environment (pantulan studio)
+(()=>{const c=document.createElement('canvas');c.width=512;c.height=256;const g=c.getContext('2d');const gr=g.createLinearGradient(0,0,0,256);
+gr.addColorStop(0,'#6a7b99');gr.addColorStop(.5,'#1c2538');gr.addColorStop(1,'#0b0f19');g.fillStyle=gr;g.fillRect(0,0,512,256);
+g.fillStyle='#fff';g.fillRect(60,40,100,30);g.fillRect(300,30,130,24);g.fillStyle='#06B6D4';g.fillRect(200,100,70,14);
+const t=new THREE.CanvasTexture(c);t.mapping=THREE.EquirectangularReflectionMapping;t.encoding=THREE.sRGBEncoding;
+const p=new THREE.PMREMGenerator(renderer);scene.environment=p.fromEquirectangular(t).texture;t.dispose();p.dispose();})();
+
+scene.add(new THREE.HemisphereLight(0x9bb4ff,0x0b0f19,.7));
+const sun=new THREE.DirectionalLight(0xffffff,1.6);sun.position.set(6,10,6);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-9,right:9,top:9,bottom:-9,near:1,far:30});sun.shadow.bias=-.0004;scene.add(sun);
+const rim=new THREE.PointLight(0x06B6D4,1.2,30);rim.position.set(-6,4,-6);scene.add(rim);
+
+// Lantai, grid & sumbu origo
+const grid=new THREE.GridHelper(24,24,0x06B6D4,0x1e293b);grid.material.transparent=true;grid.material.opacity=.55;scene.add(grid);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(40,40),new THREE.ShadowMaterial({opacity:.4}));floor.rotation.x=-Math.PI/2;floor.position.y=.002;floor.receiveShadow=true;scene.add(floor);
+[[0xff4d4d,[2.2,0,0]],[0x4dff88,[0,2.2,0]],[0x4d9bff,[0,0,2.2]]].forEach(([c,v])=>{const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(...v)]);scene.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:c})));});
+const org=new THREE.Mesh(new THREE.SphereGeometry(.08,16,16),new THREE.MeshBasicMaterial({color:0xF97316}));scene.add(org);
+
+const controls=new THREE.OrbitControls(camera,renderer.domElement);
+Object.assign(controls,{enableDamping:true,dampingFactor:.08,minDistance:3,maxDistance:26,maxPolarAngle:Math.PI*.495,autoRotateSpeed:1.4});
+let tgtGoal=null,posGoal=null;
+controls.addEventListener('start',()=>{tgtGoal=null;posGoal=null});
+
+// ---------- Helper ----------
+const V=(...a)=>new THREE.Vector3(...a);
+const M=(color,metal=.5,rough=.4,em=0,ei=0,extra={})=>{const m=new THREE.MeshStandardMaterial(Object.assign({color,metalness:metal,roughness:rough,emissive:em,emissiveIntensity:ei},extra));m.userData.be=new THREE.Color(em);m.userData.bi=ei;return m;};
+const mesh=(geo,mat,x=0,y=0,z=0)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;return m;};
+const cylZ=(r,l,mat,x=0,y=0,z=0,seg=24)=>{const g=new THREE.CylinderGeometry(r,r,l,seg);g.rotateX(Math.PI/2);return mesh(g,mat,x,y,z);};
+const I=(fn,how,imp,sym)=>({fn,how,imp,sym});
+function addPart(root,parts,id,name,obj,dir,info,ghost){const p={id,name,obj,dir:dir,base:obj.position.clone(),info,ghost:!!ghost,meshes:[]};
+obj.traverse(o=>{if(o.isMesh){o.userData.part=p;p.meshes.push(o)}});root.add(obj);parts.push(p);return p;}
+const grp=(x,y,z)=>{const g=new THREE.Group();g.position.set(x,y,z);return g;};
+
+// ---------- MODEL 1: MESIN PISTON ----------
+function buildEngine(){
+ const root=new THREE.Group(),parts=[];const P=(...a)=>addPart(root,parts,...a);
+ const cy=.6,r=.35,L=1.5,TAU=Math.PI*2;
+ const alu=()=>M(0xb4bdcc,.85,.28),steel=()=>M(0x8c97a8,.95,.22);
+ // Blok
+ const blk=grp(0,0,0);
+ const gl=M(0x7c8aa5,.6,.35,0,0,{transparent:true,opacity:.3,side:THREE.DoubleSide,depthWrite:false});
+ const w1=mesh(new THREE.CylinderGeometry(.78,.78,1.7,40,1,true),gl,0,2.35,0);
+ const w2=mesh(new THREE.BoxGeometry(1.9,1.5,1.2),M(0x7c8aa5,.6,.35,0,0,{transparent:true,opacity:.16,depthWrite:false}),0,.75,0);
+ w1.castShadow=w2.castShadow=false;blk.add(w1,w2);
+ [1.65,2.05,2.45,2.85].forEach(y=>blk.add(mesh(new THREE.CylinderGeometry(.88,.88,.07,40),M(0x5b6a86,.8,.35),0,y,0)));
+ P('block','Blok Silinder',blk,V(0,0,-3),I('Rumah tempat piston bergerak naik-turun sekaligus penopang seluruh mesin.','Dinding silinder yang halus membuat piston meluncur rapat. Sirip-sirip di luarnya membuang panas ke udara agar mesin tidak terlalu panas.','Retak atau panas berlebih (overheat) membuat tenaga turun, piston bisa macet, dan mesin bisa mati total.','mesin terlalu panas, tenaga turun'),true);
+ // Piston
+ const pis=grp(0,2.1,0);pis.add(mesh(new THREE.CylinderGeometry(.52,.52,.6,32),alu()));
+ [.2,.1,0].forEach(y=>{const t=mesh(new THREE.TorusGeometry(.52,.035,8,32),M(0x222833,.9,.4),0,y,0);t.rotation.x=Math.PI/2;pis.add(t)});
+ pis.add(cylZ(.08,1,steel(),0,-.12,0));
+ P('piston','Piston & Ring',pis,V(0,1.4,0),I('Menerima dorongan ledakan bahan bakar dan mengubahnya menjadi gerak lurus naik-turun.','Ledakan di ruang bakar menekan piston ke bawah. Ring piston menyekat agar gas tidak bocor dan menyapu oli dari dinding silinder.','Piston atau ring aus/macet membuat kompresi bocor, oli ikut terbakar, dan mesin bisa berhenti mendadak.','piston macet, mesin nyaris berhenti'));
+ // Stang piston
+ const rod=grp(0,2,0);rod.add(mesh(new THREE.CylinderGeometry(.09,.14,L,14),steel()));
+ rod.add(mesh(new THREE.TorusGeometry(.2,.07,12,24),steel(),0,-L/2,0));rod.add(mesh(new THREE.TorusGeometry(.13,.05,10,20),steel(),0,L/2,0));
+ P('rod','Stang Piston (Connecting Rod)',rod,V(2.8,.6,0),I('Penghubung antara piston dan poros engkol.','Ujung kecil terikat pada piston, ujung besar melingkari pin poros engkol. Gerak lurus piston diteruskan menjadi gerak memutar.','Jika patah, piston terlepas dari poros: tenaga tidak tersalur dan komponen lain bisa ikut hancur.','stang patah, piston terputus dari poros'));
+ // Poros engkol
+ const crank=grp(0,cy,0),spin=new THREE.Group();crank.add(spin);
+ spin.add(cylZ(.13,2.6,steel()),cylZ(.1,.6,steel(),0,r,0));
+ [-.3,.3].forEach(z=>{spin.add(mesh(new THREE.BoxGeometry(.5,1,.12),steel(),0,.1,z));spin.add(cylZ(.4,.12,M(0x5d6678,.9,.3),0,-.3,z,28))});
+ P('crank','Poros Engkol (Crankshaft)',crank,V(0,-.1,3.2),I('Mengubah gerak naik-turun piston menjadi putaran yang bisa menggerakkan roda atau generator.','Pin engkol yang letaknya menyimpang dari sumbu bekerja seperti pedal sepeda: didorong dari atas, poros pun berputar. Bobot pengimbang meredam getaran.','Bengkok atau patah membuat mesin tidak bisa berputar dan bergetar hebat.','poros engkol patah, putaran berhenti'));
+ // Kepala silinder
+ const head=grp(0,3.2,0);head.add(mesh(new THREE.CylinderGeometry(.82,.82,.5,32),alu(),0,.25,0));
+ [.12,.3,.46].forEach(y=>head.add(mesh(new THREE.CylinderGeometry(.9,.9,.06,32),alu(),0,y,0)));head.add(mesh(new THREE.CylinderGeometry(.2,.2,.15,16),steel(),0,.575,0));
+ P('head','Kepala Silinder (Cylinder Head)',head,V(0,1.7,0),I('Menutup silinder dari atas dan membentuk ruang bakar tempat campuran bensin dan udara dibakar.','Bersama gasket, kepala silinder menahan tekanan tinggi saat kompresi dan ledakan. Busi dipasang di bagian ini.','Gasket bocor atau kepala melengkung membuat tekanan hilang: tenaga lemah, suara kasar, asap putih.','kompresi bocor, tenaga lemah'));
+ // Busi
+ const plug=grp(0,3.7,0);
+ plug.add(mesh(new THREE.CylinderGeometry(.07,.07,.5,12),steel(),0,-.25,0),mesh(new THREE.CylinderGeometry(.17,.17,.2,6),M(0xd4a73a,.9,.3),0,.05,0),mesh(new THREE.CylinderGeometry(.11,.11,.55,16),M(0xf1f5f9,.1,.4),0,.45,0),mesh(new THREE.CylinderGeometry(.04,.04,.2,8),steel(),0,.85,0));
+ const sm=M(0xffffff,0,.5,0xfff1a8,0);const spark=mesh(new THREE.SphereGeometry(.12,12,12),sm,0,-.52,0);spark.userData.noHl=1;spark.castShadow=false;plug.add(spark);
+ const pl=new THREE.PointLight(0xffe28a,0,6);pl.position.set(0,-.4,0);plug.add(pl);
+ P('plug','Busi (Spark Plug)',plug,V(0,3.5,0),I('Memercikkan api listrik untuk menyulut campuran bahan bakar di ruang bakar.','Tegangan puluhan ribu volt melompat antara dua elektroda busi tepat ketika piston berada di titik mati atas (TMA), lalu terjadilah pembakaran.','Busi mati berarti tidak ada pembakaran: mesin tersendat, sulit hidup, dan boros bahan bakar.','busi mati, tidak ada percikan api'));
+ // Efek kerusakan
+ const D={plug:{s:.3,st:1,ns:1},head:{s:.55,st:1},piston:{s:.08,st:1,fz:1},rod:{s:.85,fz:1,ns:1},crank:{s:0,ns:1},block:{s:.6,st:1}};
+ let angC=0,angP=0,cur=1;
+ return{root,parts,def:'plug',cam:{pos:V(7,4.5,9),target:V(0,1.8,0)},
+ update(t,dt){let f=1,st=0,ns=0,fz=0;broken.forEach(id=>{const d=D[id];f=Math.min(f,d.s);st|=d.st||0;ns|=d.ns||0;fz|=d.fz||0});
+  const tg=f*(st?(.25+.75*Math.pow(Math.max(0,Math.sin(t*4.5)),2)):1);cur+=(tg-cur)*Math.min(1,dt*5);
+  angC+=cur*dt*6;if(!fz)angP=angC;
+  spin.rotation.z=-angC;
+  const s=Math.sin(angP),py=cy+r*Math.cos(angP)+Math.sqrt(L*L-r*r*s*s);
+  pis.position.set(0,py,0);pis.userData.b=1;piston(pis,py);
+  const cyp=cy+r*Math.cos(angP),dy=py-cyp;rod.position.set(r*s/2,(py+cyp)/2,0);rod.rotation.z=Math.atan2(r*s,dy);
+  const ph=((angC%TAU)+TAU)%TAU,fl=(ns||fz)?0:Math.max(0,1-ph/.7);
+  sm.emissiveIntensity=fl*5;spark.scale.setScalar(.05+fl*1.4);pl.intensity=fl*4;
+  parts.find(p=>p.id==='piston').base.copy(pis.position);const rp=parts.find(p=>p.id==='rod');rp.base.copy(rod.position);}};
+ function piston(o,y){}
+}
+
+// ---------- MODEL 2: PANEL SURYA ----------
+function buildSolar(){
+ const root=new THREE.Group(),parts=[];const P=(...a)=>addPart(root,parts,...a);
+ // Matahari (dekorasi)
+ const sunM=mesh(new THREE.SphereGeometry(.7,24,24),new THREE.MeshBasicMaterial({color:0xffb347}),-7,7.5,-2);sunM.castShadow=false;root.add(sunM);
+ // Panel
+ const cv=document.createElement('canvas');cv.width=cv.height=256;const g=cv.getContext('2d');g.fillStyle='#14306b';g.fillRect(0,0,256,256);g.strokeStyle='#8fb4ff';g.lineWidth=3;
+ for(let i=0;i<=6;i++){g.beginPath();g.moveTo(i*256/6,0);g.lineTo(i*256/6,256);g.stroke()}for(let i=0;i<=4;i++){g.beginPath();g.moveTo(0,i*64);g.lineTo(256,i*64);g.stroke()}
+ const tex=new THREE.CanvasTexture(cv);tex.encoding=THREE.sRGBEncoding;
+ const pan=grp(-3.2,1.5,0);pan.add(mesh(new THREE.CylinderGeometry(.07,.07,1.5,12),M(0x94a3b8,.9,.3),0,-.75,0));
+ const plate=new THREE.Group();plate.rotation.x=.6;plate.add(mesh(new THREE.BoxGeometry(2.7,.09,1.8),M(0xc5ced9,.9,.3)));
+ const face=mesh(new THREE.PlaneGeometry(2.5,1.6),M(0xffffff,.5,.2,0,0,{map:tex}),0,.05,0);face.rotation.x=-Math.PI/2;plate.add(face);pan.add(plate);
+ P('panel','Panel Surya (Solar Cell)',pan,V(-1.3,1.8,0),I('Mengubah cahaya matahari langsung menjadi listrik arus searah (DC).','Sel surya dari silikon melepaskan elektron saat terkena cahaya. Aliran elektron inilah yang menjadi arus listrik.','Panel retak atau tertutup kotoran/bayangan membuat listrik tidak dihasilkan, seluruh sistem mati.','panel surya tidak menghasilkan listrik'));
+ // Controller
+ const ctl=grp(-.9,.5,0);ctl.add(mesh(new THREE.BoxGeometry(1.2,.8,.5),M(0x334155,.6,.4)));
+ ctl.add(mesh(new THREE.BoxGeometry(.5,.25,.02),M(0x0b1220,.3,.3,0x06B6D4,.6),-.2,.1,.26));
+ for(let i=0;i<4;i++)ctl.add(mesh(new THREE.BoxGeometry(.9,.03,.5),M(0xF97316,.8,.4),0,.43+i*0,-0+0));
+ const ledM=M(0x111111,0,.4,0x22ff88,2);const led=mesh(new THREE.SphereGeometry(.05,12,12),ledM,.42,.25,.26);led.userData.noHl=1;ctl.add(led);
+ P('ctl','Inverter / Controller',ctl,V(0,2.3,0),I('Mengatur pengisian baterai dan mengamankan sistem dari arus berlebih.','Controller memastikan baterai terisi dengan aman. Inverter dapat mengubah listrik DC menjadi AC untuk peralatan rumah.','Jika rusak, baterai tidak terisi dengan benar dan listrik tidak sampai ke beban.','controller rusak, pengisian terhenti'));
+ // Baterai
+ const bat=grp(1.3,.6,0);bat.add(mesh(new THREE.BoxGeometry(1.4,1.2,.9),M(0x1f3b2d,.4,.5)));
+ [[-.4,0xdc2626],[.4,0x111827]].forEach(([x,c])=>bat.add(mesh(new THREE.CylinderGeometry(.1,.1,.18,12),M(c,.8,.3),x,.68,0)));
+ const bars=[0,1,2,3].map(k=>{const b=mesh(new THREE.BoxGeometry(.22,.12,.03),M(0x0a0a0a,0,.5,0x22ff88,.05),-.4+k*.27,.1,.46);b.userData.noHl=1;bat.add(b);return b});
+ P('battery','Baterai Penyimpan',bat,V(0,0,-2.6),I('Menyimpan listrik dari panel supaya lampu tetap menyala saat malam atau mendung.','Energi listrik disimpan sebagai energi kimia saat diisi, lalu dilepas kembali menjadi listrik ketika dibutuhkan.','Baterai rusak membuat listrik tidak tersimpan dan tidak bisa disalurkan ke lampu.','baterai rusak, listrik tidak tersimpan'));
+ // Lampu
+ const lamp=grp(3.7,0,0);lamp.add(mesh(new THREE.CylinderGeometry(.45,.5,.15,24),M(0x475569,.8,.4),0,.075,0),mesh(new THREE.CylinderGeometry(.06,.06,2,12),M(0x94a3b8,.9,.3),0,1.1,0),mesh(new THREE.CylinderGeometry(.18,.52,.4,24),M(0x334155,.7,.4),0,2.25,0));
+ const bm=M(0x222222,0,.3,0xffd37a,0);const bulb=mesh(new THREE.SphereGeometry(.24,20,20),bm,0,1.95,0);bulb.userData.noHl=1;bulb.castShadow=false;lamp.add(bulb);
+ const bl=new THREE.PointLight(0xffd37a,0,9);bl.position.set(0,1.85,0);lamp.add(bl);
+ P('lamp','Lampu Beban',lamp,V(1.6,1.2,0),I('Beban listrik: perangkat yang memakai energi untuk menghasilkan cahaya.','Arus dari baterai mengalir melewati filamen/LED sehingga bersinar terang.','Lampu rusak tidak menyala walaupun panel, baterai, dan kabel dalam keadaan baik.','lampu rusak, tidak menyala'));
+ // Kabel + partikel arus
+ const curve=new THREE.CatmullRomCurve3([V(-3,.3,.3),V(-2,.08,.5),V(-.9,.5,.3),V(.3,.12,.5),V(1.3,.6,.45),V(2.4,.1,.5),V(3.7,.3,.1)],false,'centripetal');
+ const cab=new THREE.Group();cab.add(mesh(new THREE.TubeGeometry(curve,160,.05,8),M(0xF97316,.2,.6)));
+ const N=44,inst=new THREE.InstancedMesh(new THREE.SphereGeometry(.09,8,8),new THREE.MeshBasicMaterial({color:0x7dfaff}),N);
+ Object.assign(inst.userData,{noHl:1,skip:1});inst.raycast=()=>{};inst.frustumCulled=false;cab.add(inst);
+ const mkM=new THREE.MeshBasicMaterial({color:0xff2a2a});const mk=new THREE.Mesh(new THREE.SphereGeometry(.17,12,12),mkM);mk.position.copy(curve.getPointAt(.8));mk.userData.noHl=1;mk.userData.skip=1;mk.raycast=()=>{};mk.visible=false;cab.add(mk);
+ P('cable','Kabel Penghantar',cab,V(0,0,2.4),I('Jalur yang menyalurkan listrik dari satu komponen ke komponen lain.','Elektron mengalir di dalam inti tembaga kabel. Lapisan karet menjaga agar arus tidak bocor atau menyengat.','Kabel putus memutus rangkaian: aliran listrik terhenti dan lampu padam.','kabel putus, aliran listrik terhenti'));
+ const CUT={panel:0,ctl:.3,battery:.62,cable:.8},d=new THREE.Object3D();let charge=.4,lampV=0;
+ return{root,parts,def:'cable',cam:{pos:V(2,5,11),target:V(0,1.2,0)},
+ update(t,dt){let cut=1.01;broken.forEach(id=>{if(id in CUT)cut=Math.min(cut,CUT[id])});
+  for(let i=0;i<N;i++){const u=(i/N+t*.1)%1;d.position.copy(curve.getPointAt(u));d.scale.setScalar(u<cut?1:.0001);d.updateMatrix();inst.setMatrixAt(i,d.matrix)}inst.instanceMatrix.needsUpdate=true;
+  const on=cut>1&&!broken.has('lamp');lampV+=((on?1:0)-lampV)*Math.min(1,dt*6);bm.emissiveIntensity=lampV*2.4+.02;bl.intensity=lampV*3;
+  charge=Math.max(0,Math.min(1,charge+(cut>.62?.03:-.02)*dt));const bb=broken.has('battery');
+  bars.forEach((b,k)=>b.material.emissiveIntensity=(!bb&&charge>(k+.4)/4)?1.8:.05);
+  const ok=![...broken].some(id=>id in CUT);ledM.emissive.setHex(ok?0x22ff88:0xff2222);
+  mk.visible=broken.has('cable');mk.scale.setScalar(.8+.5*Math.abs(Math.sin(t*8)));}};
+}
+
+// ---------- STATE & UI ----------
+const MODELS={engine:buildEngine,solar:buildSolar};
+const broken=new Set();let model=null,mode='normal',sel=null,hover=null,exT=0,exC=0;
+function setGoalToSel(){if(sel)tgtGoal=sel.base.clone().addScaledVector(sel.dir,exT).add(sel.obj.parent?sel.obj.parent.position:V(0,0,0));}
+function refreshUI(){
+ $('m-normal').className='btn'+(mode==='normal'?' on':'');$('m-damage').className='btn'+(mode==='damage'?' warn':'');
+ const al=$('alert');if(broken.size){const ps=model.parts.filter(p=>broken.has(p.id));al.classList.remove('hidden');al.classList.add('flex');
+  $('alert-t').textContent=ps.map(p=>p.name.split(' (')[0]).join(', ')+' rusak — '+ps[0].info.sym;}else{al.classList.add('hidden');al.classList.remove('flex')}
+ if(sel){const b=broken.has(sel.id);const s=$('s-status');s.textContent=b?'RUSAK':'NORMAL';s.style.cssText=b?'background:#7f1d1d;color:#fecaca':'background:rgba(6,182,212,.2);color:#67e8f9';
+  $('s-btn').textContent=b?'✔ Perbaiki Komponen Ini':'⚠ Simulasikan Kerusakan Komponen Ini';}
+}
+function setSel(p){sel=p;const s=$('side');if(!p){s.classList.remove('open');return}
+ $('s-name').textContent=p.name;$('s-fn').textContent=p.info.fn;$('s-how').textContent=p.info.how;$('s-imp').textContent=p.info.imp;s.classList.add('open');s.scrollTop=0;refreshUI();setGoalToSel();}
+function setMode(m){mode=m;if(m==='normal')broken.clear();else if(!broken.size)broken.add(model.def);refreshUI();}
+function loadModel(k){if(model)scene.remove(model.root);broken.clear();mode='normal';hover=null;setSel(null);model=MODELS[k]();scene.add(model.root);
+ posGoal=model.cam.pos.clone();tgtGoal=model.cam.target.clone();document.querySelectorAll('#models .btn').forEach(b=>b.classList.toggle('on',b.dataset.m===k));refreshUI();}
+document.querySelectorAll('#models .btn').forEach(b=>b.onclick=()=>loadModel(b.dataset.m));
+$('m-normal').onclick=()=>setMode('normal');$('m-damage').onclick=()=>setMode('damage');
+$('fixall').onclick=()=>{broken.clear();mode='normal';refreshUI()};
+$('s-close').onclick=()=>setSel(null);
+$('s-btn').onclick=()=>{if(!sel)return;broken.has(sel.id)?broken.delete(sel.id):broken.add(sel.id);mode=broken.size?'damage':'normal';refreshUI();};
+$('ex').oninput=e=>{exT=e.target.value/100;$('ex-v').textContent=e.target.value+'%';setGoalToSel();};
+$('reset').onclick=()=>{posGoal=model.cam.pos.clone();tgtGoal=model.cam.target.clone();};
+$('auto').onclick=e=>{controls.autoRotate=!controls.autoRotate;e.currentTarget.classList.toggle('on',controls.autoRotate)};
+
+// Raycaster
+const rc=new THREE.Raycaster(),mv=new THREE.Vector2(),cvs=renderer.domElement,tip=$('tip');
+function pick(e){const r=cvs.getBoundingClientRect();mv.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);rc.setFromCamera(mv,camera);
+ const list=[];model.parts.forEach(p=>p.meshes.forEach(m=>{if(!m.userData.skip)list.push(m)}));const h=rc.intersectObjects(list,false);
+ const x=h.find(i=>!i.object.userData.part.ghost)||h[0];return x?x.object.userData.part:null;}
+function showTip(p,e){if(p){tip.textContent=p.name;tip.style.left=Math.min(e.clientX+14,innerWidth-190)+'px';tip.style.top=(e.clientY+14)+'px';tip.classList.remove('hidden')}else tip.classList.add('hidden')}
+cvs.addEventListener('pointermove',e=>{if(e.pointerType!=='mouse'||e.buttons)return;hover=pick(e);cvs.style.cursor=hover?'pointer':'grab';showTip(hover,e)});
+let dn=null;cvs.addEventListener('pointerdown',e=>{dn={x:e.clientX,y:e.clientY,t:performance.now()};tip.classList.add('hidden')});
+cvs.addEventListener('pointerup',e=>{if(!dn)return;const mv=Math.hypot(e.clientX-dn.x,e.clientY-dn.y),dt=performance.now()-dn.t;dn=null;
+ if(mv<7&&dt<500){const p=pick(e);if(p)setSel(p);else if(e.pointerType!=='mouse')setSel(null);}});
+cvs.addEventListener('pointerleave',()=>{hover=null;tip.classList.add('hidden')});
+
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
+addEventListener('resize',resize);resize();
+
+const CY=new THREE.Color(0x06B6D4);
+const clock=new THREE.Clock();let T=0;
+loadModel('engine');camera.position.copy(model.cam.pos);controls.target.copy(model.cam.target);posGoal=tgtGoal=null;
+(function loop(){requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.05);T+=dt;
+ exC+=(exT-exC)*Math.min(1,dt*6);
+ const pulse=.5+.5*Math.sin(T*6);
+ model.parts.forEach(p=>{const b=broken.has(p.id),h=p===hover||p===sel;
+  p.meshes.forEach(m=>{if(m.userData.noHl)return;const mt=m.material;
+   if(b){mt.emissive.setHex(0xff1a1a);mt.emissiveIntensity=.25+.6*pulse}
+   else if(h){mt.emissive.copy(CY);mt.emissiveIntensity=p===hover?.55:.3}
+   else{mt.emissive.copy(mt.userData.be);mt.emissiveIntensity=mt.userData.bi}});});
+ model.update(T,dt);
+ model.parts.forEach(p=>p.obj.position.copy(p.base).addScaledVector(p.dir,exC));
+ if(tgtGoal){const n=controls.target.clone().lerp(tgtGoal,.08),d=n.sub(controls.target);controls.target.add(d);if(!posGoal)camera.position.add(d);if(d.length()<.002)tgtGoal=null;}
+ if(posGoal){camera.position.lerp(posGoal,.08);if(camera.position.distanceTo(posGoal)<.01)posGoal=null;}
+ controls.update();renderer.render(scene,camera);})();
+</script>
+</body></html>
