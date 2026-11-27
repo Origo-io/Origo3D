@@ -36,6 +36,7 @@ input[type=range]{width:100%;accent-color:#06B6D4;height:1.4rem}
     <optgroup label="Otomotif &amp; Energi"><option value="engine">⚙ Mesin Piston</option><option value="solar">☀ Panel Surya</option></optgroup>
     <optgroup label="Elektromekanik"><option value="motor">🔩 Dinamo (Motor Listrik)</option><option value="fan">🌀 Kipas Angin</option><option value="washer">🧺 Mesin Cuci</option></optgroup>
     <optgroup label="Peralatan Rumah"><option value="iron">♨ Setrika</option><option value="blender">🥤 Blender</option><option value="lamp">💡 Lampu Meja</option></optgroup>
+    <optgroup label="Alat &amp; Perabot Tambahan"><option value="drill">🔧 Bor Tangan Listrik</option><option value="pump">💧 Pompa Air (Jet Pump)</option><option value="fridge">🧊 Kulkas</option><option value="oven">🔥 Oven Listrik</option><option value="pendant">🔆 Lampu Gantung</option><option value="ladder">📐 Tangga Lipat</option></optgroup>
   </select>
 </header>
 
@@ -330,7 +331,126 @@ function buildLamp(){
  return{root,parts,def:'bulb',cam:{pos:V(5,4,7),target:V(0,1.4,0)},update(t,dt){const s=run(t,dt);bm.emissiveIntensity=.02+s.cur*2.6;sp.intensity=s.cur*2.5;}};
 }
 
-const MODELS={engine:buildEngine,solar:buildSolar,motor:buildMotor,fan:buildFan,washer:buildWasher,iron:buildIron,blender:buildBlender,lamp:buildLamp};
+// ---------- KATALOG TAMBAHAN: ALAT & PERABOT ----------
+const cylX=(r,l,m,x=0,y=0,z=0,seg=24)=>{const g=new THREE.CylinderGeometry(r,r,l,seg);g.rotateZ(Math.PI/2);return mesh(g,m,x,y,z)};
+const edges=(w,h,d,y,c=0x7dd3fc)=>{const e=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w,h,d)),new THREE.LineBasicMaterial({color:c}));e.position.y=y;return e};
+const swing=(o,dt,tr)=>{o.rotation.y+=(tr-o.rotation.y)*Math.min(1,dt*4)};
+
+function buildDrill(){
+ const root=new THREE.Group(),parts=[];const P=(...a)=>addPart(root,parts,...a);const Y=2.4;
+ const run=runner({body:{s:0},grip:{s:0},chuck:{s:.1,st:1},battery:{s:0}});
+ const yl=()=>M(0xfacc15,.3,.45),dk=()=>M(0x1f2937,.5,.4);
+ const body=grp(0,0,0);body.add(cylX(.55,1.8,yl(),-.4,Y,0),cylX(.42,.8,dk(),.9,Y,0),cylX(.5,.15,dk(),-1.35,Y,0));
+ for(let i=0;i<4;i++)body.add(mesh(new THREE.BoxGeometry(.08,.04,.5),dk(),-.9+i*.18,Y+.55,0));
+ P('body','Bodi Motor Ergonomis',body,V(-1.2,1,0),I('Rumah motor listrik dan roda gigi sekaligus pegangan depan.','Motor menghasilkan putaran cepat; roda gigi di bagian depan menurunkan kecepatan dan menambah tenaga puntir.','Motor terbakar atau sikat arang habis: bor tidak berputar dan berbau gosong.','motor mati, bor tidak berputar'));
+ const grip=grp(0,0,0);grip.add(link(V(-.15,Y-.3,0),V(-.35,1.1,0),.22,M(0x111827,.2,.8)),mesh(new THREE.BoxGeometry(.14,.32,.16),M(0xF97316,.4,.4),.12,Y-.55,0));
+ P('grip','Gagang & Trigger',grip,V(0,0,2.2),I('Tempat menggenggam bor sekaligus tombol penyala.','Makin dalam trigger ditekan, makin besar arus ke motor sehingga putaran makin cepat.','Trigger rusak: bor tidak bisa dinyalakan atau kecepatannya tidak bisa diatur.','trigger rusak, tidak bisa dinyalakan'));
+ const chuck=grp(1.3,Y,0);chuck.add(cylX(.32,.5,STEEL()),cylX(.36,.12,dk(),-.2,0,0),cylX(.05,1.2,STEEL(),.85,0,0),mesh(new THREE.BoxGeometry(.9,.02,.12),STEEL(),.85,0,0));
+ P('chuck','Chuck & Mata Bor',chuck,V(2.2,.6,0),I('Menjepit mata bor agar ikut berputar kencang.','Rahang chuck mengatup ke tengah saat diputar sehingga mata bor tercengkeram kuat dan lurus.','Chuck longgar: mata bor selip, lubang miring, dan bisa terlepas.','mata bor selip, putaran tersendat'));
+ const bat=grp(0,0,0);bat.add(mesh(new THREE.BoxGeometry(1.1,.5,.8),dk(),-.35,.85,0),mesh(new THREE.BoxGeometry(1.12,.08,.82),yl(),-.35,.95,0));
+ const lm=M(0x111111,0,.4,0x22ff88,2);const led=mesh(new THREE.SphereGeometry(.05,10,10),lm,.1,.85,.41);led.userData.noHl=1;bat.add(led);
+ bat.add(mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(-.9,.75,.2),V(-1.6,.2,.6),V(-2.6,.05,1.2)],false,'centripetal'),30,.04,8),M(0x111827,.1,.7)));
+ P('battery','Baterai & Kabel Pengisi',bat,V(0,-.1,-2.2),I('Menyimpan listrik agar bor bisa dipakai tanpa colokan.','Sel baterai melepas listrik ke motor; kabel pengisi mengisinya kembali lewat adaptor.','Baterai habis atau rusak: bor mati total walau bagian lain baik.','baterai rusak, bor mati'));
+ return{root,parts,def:'battery',cam:{pos:V(4,3.8,7.5),target:V(.4,1.6,0)},update(t,dt){const s=run(t,dt);chuck.rotation.x=s.ang*18;lm.emissive.setHex(broken.has('battery')?0xff2222:0x22ff88);}};
+}
+
+function buildPump(){
+ const root=new THREE.Group(),parts=[];const P=(...a)=>addPart(root,parts,...a);const Y=1.2;
+ const run=runner({motor:{s:0},housing:{s:.5,st:1},impeller:{s:.2,st:1},pipes:{s:.4,st:1},base:{s:.7,st:1}});
+ const dk=()=>M(0x1f2937,.5,.4),pm=()=>M(0x94a3b8,.9,.3);
+ const motor=grp(0,0,0);motor.add(cylX(.7,1.8,M(0x1d4ed8,.5,.35),-1.2,Y,0),cylX(.72,.25,dk(),-2.25,Y,0),mesh(new THREE.BoxGeometry(.7,.35,.6),dk(),-1.2,Y+.85,0));
+ for(let i=0;i<5;i++){const t=mesh(new THREE.TorusGeometry(.72,.05,8,32),M(0x1e40af,.5,.4),-1.9+i*.35,Y,0);t.rotation.y=Math.PI/2;motor.add(t)}
+ P('motor','Bodi Motor Listrik',motor,V(-2.4,.6,0),I('Penggerak yang memutar impeller pompa.','Motor listrik memutar poros dengan kecepatan tinggi; kipas pendingin di belakang menjaga suhunya.','Motor terbakar atau kapasitor lemah: pompa hanya berdengung dan tidak berputar.','motor mati, pompa tidak berputar'));
+ const hs=grp(0,0,0);const hm=cylX(.95,.8,GLASS(0x38bdf8,.3),.75,Y,0);hm.castShadow=false;hs.add(hm);
+ [.35,1.15].forEach(x=>{const t=mesh(new THREE.TorusGeometry(.95,.06,8,36),STEEL(),x,Y,0);t.rotation.y=Math.PI/2;hs.add(t)});
+ P('housing','Rumah Pompa (Volute)',hs,V(0,1.7,0),I('Menampung impeller dan mengarahkan air ke pipa keluar.','Ruang berbentuk siput mengubah kecepatan air menjadi tekanan sebelum air keluar.','Retak atau seal bocor: air menetes, tekanan turun, daya hisap hilang.','rumah pompa bocor, tekanan turun'),true);
+ const imp=grp(.75,Y,0);imp.add(cylX(.08,1.4,STEEL(),-.7,0,0),cylX(.7,.08,M(0xcbd5e1,.9,.3),.15,0,0),cylX(.15,.3,STEEL()));
+ for(let k=0;k<6;k++){const g=new THREE.Group();g.rotation.x=k*Math.PI/3;g.add(mesh(new THREE.BoxGeometry(.35,.55,.05),M(0xf59e0b,.7,.35),0,.42,0));imp.add(g)}
+ P('impeller','Impeller (Baling-baling Pompa)',imp,V(0,0,2.2),I('Baling-baling dalam pompa yang melempar air ke luar.','Saat berputar, sudu impeller melempar air ke tepi sehingga bagian tengah menghisap air baru.','Sudu aus atau tersumbat kotoran: aliran air kecil dan pompa berisik.','impeller aus, aliran air lemah'));
+ const pp=grp(0,0,0);pp.add(cylX(.3,.9,pm(),1.6,Y,0),mesh(new THREE.CylinderGeometry(.25,.25,1.3,16),pm(),.75,2.8,0),mesh(new THREE.SphereGeometry(.28,16,16),pm(),.75,3.45,0),cylX(.25,1.2,pm(),1.35,3.45,0));
+ P('pipes','Pipa Masuk & Keluar',pp,V(1.8,.8,0),I('Memasukkan air dari sumber dan menyalurkannya ke tujuan.','Pipa masuk menghisap air; pipa keluar mengalirkan air bertekanan ke tandon atau keran.','Pipa bocor atau udara masuk: pompa tidak menghisap dan aliran putus-putus.','pipa bocor, aliran putus-putus'));
+ const base=grp(0,0,0);base.add(mesh(new THREE.BoxGeometry(4.2,.18,1.8),M(0x334155,.7,.4),-.3,.09,0),mesh(new THREE.BoxGeometry(.7,.32,1.3),M(0x334155,.7,.4),-1.2,.33,0));
+ [[-2.2,-.7],[-2.2,.7],[1.6,-.7],[1.6,.7]].forEach(([x,z])=>base.add(mesh(new THREE.CylinderGeometry(.09,.09,.08,6),STEEL(),x,.22,z)));
+ P('base','Kaki Dudukan',base,V(0,0,0),I('Menahan pompa tetap kokoh dan meredam getaran.','Pelat dudukan diikat baut ke lantai sehingga pompa tidak bergeser saat bekerja.','Baut kendor: pompa bergetar dan sambungan pipa bisa bocor.','dudukan longgar, pompa bergetar'));
+ return{root,parts,def:'impeller',cam:{pos:V(5,3.8,6),target:V(-.2,1.3,0)},update(t,dt){const s=run(t,dt);imp.rotation.x=s.ang*14;}};
+}
+
+function buildFridge(){
+ const root=new THREE.Group(),parts=[];const P=(...a)=>addPart(root,parts,...a);
+ const run=runner({cabinet:{s:0},door1:{s:.3},door2:{s:.3},shelves:{s:.7,st:1}});
+ const cab=grp(0,0,0);const bx=mesh(new THREE.BoxGeometry(1.7,3.8,1.4),GLASS(0xe2e8f0,.2),0,1.9,0);bx.castShadow=false;cab.add(bx,edges(1.7,3.8,1.4,1.9));
+ const evM=M(0x0b3a4a,.2,.4,0x06B6D4,0);const ev=mesh(new THREE.BoxGeometry(1.4,.06,.9),evM,0,3.35,-.1);ev.userData.noHl=1;
+ const comp=mesh(new THREE.CylinderGeometry(.28,.28,.5,16),M(0x1f2937,.6,.4),.4,.5,-.45);cab.add(ev,comp);
+ P('cabinet','Kabinet & Kompresor',cab,V(0,0,-3),I('Badan berinsulasi yang menahan dingin dan menyimpan kompresor.','Kompresor memampatkan gas pendingin; gas lalu menyerap panas dari dalam kabinet lewat evaporator.','Kompresor mati: isi kulkas tidak dingin dan makanan cepat basi.','kompresor mati, tidak dingin'),true);
+ const dm=()=>M(0xd9e2ec,.6,.3);
+ const d1=grp(-.85,3.25,.72);d1.add(mesh(new THREE.BoxGeometry(1.7,1,.1),dm(),.85,0,0),mesh(new THREE.BoxGeometry(.07,.55,.1),STEEL(),1.55,-.15,.1));
+ P('door1','Pintu Atas (Freezer) & Handle',d1,V(0,1.2,2.6),I('Menutup ruang beku agar suhu tetap di bawah nol.','Karet magnet menempel rapat ke kabinet sehingga udara dingin tidak keluar.','Karet bocor atau pintu tidak menutup: bunga es menumpuk dan listrik boros.','pintu freezer terbuka, dingin hilang'));
+ const d2=grp(-.85,1.5,.72);d2.add(mesh(new THREE.BoxGeometry(1.7,2.4,.1),dm(),.85,0,0),mesh(new THREE.BoxGeometry(.07,1,.1),STEEL(),1.55,.5,.1));
+ P('door2','Pintu Bawah & Handle',d2,V(0,0,2.6),I('Menutup ruang pendingin tempat sayur, buah, dan minuman.','Handle menarik pintu; karet magnet menyegel celah agar udara dingin tetap di dalam.','Pintu tidak menutup: suhu naik dan makanan cepat basi.','pintu kulkas terbuka, suhu naik'));
+ const sh=grp(0,0,0);[.95,1.55,2.15,3.2].forEach(y=>sh.add(mesh(new THREE.BoxGeometry(1.5,.04,1.1),GLASS(0x7dd3fc,.45),0,y,0)));
+ sh.add(mesh(new THREE.BoxGeometry(1.4,.35,1),GLASS(0x4ade80,.4),0,.6,0));[[-.7,-.55],[.7,-.55],[-.7,.55],[.7,.55]].forEach(([x,z])=>sh.add(mesh(new THREE.CylinderGeometry(.09,.09,.1,12),M(0x1f2937,.3,.6),x,.05,z)));
+ P('shelves','Rak, Laci & Kaki',sh,V(2.8,0,0),I('Menata makanan dan menopang kulkas.','Rak kaca membagi ruang agar udara dingin mengalir merata; kaki yang dapat distel menjaga kulkas tetap rata.','Rak patah atau kaki tidak rata: barang jatuh dan kulkas bergetar.','rak patah, kulkas bergetar'));
+ return{root,parts,def:'door2',cam:{pos:V(6,4.5,8),target:V(0,1.9,0)},update(t,dt){const s=run(t,dt);swing(d1,dt,broken.has('door1')?-1.2:0);swing(d2,dt,broken.has('door2')?-1.2:0);evM.emissiveIntensity=s.cur*.7;comp.scale.y=1+.03*Math.sin(t*40)*s.cur;}};
+}
+
+function buildOven(){
+ const root=new THREE.Group(),parts=[];const P=(...a)=>addPart(root,parts,...a);
+ const run=runner({body:{s:.4,st:1},door:{s:0},panel:{s:0},feet:{s:.7,st:1}});
+ const body=grp(0,0,0);const bx=mesh(new THREE.BoxGeometry(2.6,1.6,1.8),GLASS(0x94a3b8,.3),0,1.05,0);bx.castShadow=false;body.add(bx,edges(2.6,1.6,1.8,1.05,0xfbbf24));
+ const tt=new THREE.Group();tt.position.set(-.3,.4,0);tt.add(mesh(new THREE.CylinderGeometry(.65,.65,.05,32),STEEL()),mesh(new THREE.CylinderGeometry(.3,.3,.25,24),M(0xb45309,.1,.7),.1,.17,0));body.add(tt);
+ const pts=[];for(let i=0;i<6;i++)pts.push(V(-1.1+i*.3,1.7,i%2?.6:-.6));
+ const elM=M(0x2a1a10,.3,.5,0xff5a00,0);const el=mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,false,'centripetal'),60,.04,8),elM);el.userData.noHl=1;body.add(el);
+ const pl=new THREE.PointLight(0xff8a3a,0,5);pl.position.set(-.3,1.2,0);body.add(pl);
+ P('body','Bodi & Ruang Panggang',body,V(0,0,-3),I('Ruang tertutup tempat makanan dipanaskan.','Elemen pemanas menyala di dalam dan piringan berputar agar panas merata.','Elemen rusak: panas tidak merata dan makanan setengah matang.','panas tidak merata'),true);
+ const door=grp(-1.3,1.05,.95);const fm=()=>M(0x1e293b,.5,.4);door.add(mesh(new THREE.BoxGeometry(1.9,.2,.1),fm(),.95,.6,0),mesh(new THREE.BoxGeometry(1.9,.2,.1),fm(),.95,-.6,0),mesh(new THREE.BoxGeometry(.2,1.4,.1),fm(),.1,0,0),mesh(new THREE.BoxGeometry(.2,1.4,.1),fm(),1.8,0,0),mesh(new THREE.BoxGeometry(1.7,1,.04),GLASS(0x7dd3fc,.35),.95,0,0),mesh(new THREE.BoxGeometry(.08,1,.1),STEEL(),1.75,0,.12));
+ P('door','Pintu Kaca',door,V(0,0,2.6),I('Memperlihatkan makanan sambil menahan panas di dalam.','Kaca tahan panas dan pengunci keselamatan memastikan oven hanya menyala saat pintu tertutup.','Pintu tidak menutup rapat: oven berhenti demi keselamatan dan panas bocor.','pintu tidak menutup, oven berhenti'));
+ const pn=grp(.975,1.05,.95);pn.add(mesh(new THREE.BoxGeometry(.6,1.5,.1),fm()));
+ const dpm=M(0x0b1220,.2,.3,0x06B6D4,.8);const dp=mesh(new THREE.BoxGeometry(.4,.2,.02),dpm,0,.5,.06);dp.userData.noHl=1;
+ const k1=cylZ(.14,.1,STEEL(),0,.05,.08),k2=cylZ(.14,.1,STEEL(),0,-.45,.08);pn.add(dp,k1,k2,mesh(new THREE.BoxGeometry(.04,.12,.04),M(0xF97316,.4,.4),0,.17,.12));
+ P('panel','Kenop Pengatur',pn,V(2,.8,1.8),I('Mengatur suhu dan waktu memanggang.','Kenop mengirim sinyal ke pengendali yang menyalakan dan mematikan elemen sesuai pengaturan.','Kenop rusak: suhu dan waktu tidak bisa diatur.','kenop rusak, tidak bisa diatur'));
+ const ft=grp(0,0,0);[[-1.1,-.7],[1.1,-.7],[-1.1,.7],[1.1,.7]].forEach(([x,z])=>ft.add(mesh(new THREE.CylinderGeometry(.12,.14,.25,14),M(0x111827,.2,.8),x,.125,z)));
+ P('feet','Kaki Penyangga',ft,V(0,0,0),I('Mengangkat oven agar ada celah udara dan tidak mudah bergeser.','Karet pada kaki meredam getaran dan melindungi meja dari panas.','Kaki tidak rata atau patah: oven miring dan bergetar.','kaki patah, oven goyang'));
+ return{root,parts,def:'door',cam:{pos:V(4.5,3.5,6.5),target:V(0,1,0)},update(t,dt){const s=run(t,dt);elM.emissiveIntensity=s.cur*1.6;pl.intensity=s.cur*1.2;tt.rotation.y=s.ang*2;k1.rotation.z=s.cur*1.2;swing(door,dt,broken.has('door')?-1.4:0);dpm.emissive.setHex(broken.has('panel')?0xff2222:0x06B6D4);dpm.emissiveIntensity=.4+.6*s.cur;}};
+}
+
+function buildPendant(){
+ const root=new THREE.Group(),parts=[];const P=(...a)=>addPart(root,parts,...a);
+ const run=runner({shade:{s:.8,st:1},socket:{s:.5,st:1},bulb:{s:0}});
+ const br=()=>M(0xd4a73a,.9,.3);
+ const neck=grp(0,0,0);neck.add(mesh(new THREE.CylinderGeometry(.35,.45,.15,24),M(0x334155,.8,.3),0,4.6,0),mesh(new THREE.CylinderGeometry(.03,.03,1.3,8),M(0x111827,.1,.7),0,3.85,0),mesh(new THREE.CylinderGeometry(.14,.14,.4,16),br(),0,3.1,0));
+ const rg=mesh(new THREE.TorusGeometry(.16,.03,8,20),br(),0,3.3,0);rg.rotation.x=Math.PI/2;neck.add(rg);
+ P('socket','Fitting & Leher Gantung',neck,V(0,.6,0),I('Menggantung lampu dari plafon dan menyalurkan listrik ke bohlam.','Kabel di dalam leher mengalirkan listrik ke fitting; ulir fitting mengunci bohlam.','Kontak longgar atau kabel rusak: lampu berkedip atau mati total.','fitting longgar, lampu berkedip'));
+ const pts=[[.18,0],[.35,-.15],[.7,-.45],[1.05,-.8],[1.15,-.9]].map(p=>new THREE.Vector2(p[0],p[1]));
+ const shade=grp(0,3,0);shade.add(mesh(new THREE.LatheGeometry(pts,40),M(0xF97316,.6,.35,0,0,{side:THREE.DoubleSide})));
+ P('shade','Kap Lampu',shade,V(0,-1,0),I('Mengarahkan cahaya ke bawah dan mempercantik ruangan.','Permukaan dalam kap memantulkan cahaya bohlam ke area di bawahnya.','Kap penyok atau jatuh: cahaya menyilaukan dan menyebar tak terarah.','kap rusak, cahaya silau'));
+ const bm=M(0x222222,0,.3,0xffd37a,0);const bulb=grp(0,2.6,0);const bb=mesh(new THREE.SphereGeometry(.26,20,20),bm);bb.userData.noHl=1;bb.castShadow=false;bulb.add(bb,mesh(new THREE.CylinderGeometry(.1,.1,.3,12),br(),0,.3,0));
+ const sp=new THREE.SpotLight(0xffe2a8,0,12,1,.6,1);sp.position.set(0,-.1,0);bulb.add(sp);root.add(sp.target);
+ const pool=new THREE.Mesh(new THREE.CircleGeometry(1.9,48),new THREE.MeshBasicMaterial({color:0xffd37a,transparent:true,opacity:0,depthWrite:false}));pool.rotation.x=-Math.PI/2;pool.position.y=.015;root.add(pool);
+ P('bulb','Bohlam (Sumber Cahaya)',bulb,V(0,-1.9,0),I('Sumber cahaya lampu.','Listrik mengalir melalui filamen atau LED sehingga menyala terang.','Bohlam putus: lampu mati padahal listrik masih ada.','bohlam putus, lampu mati'));
+ return{root,parts,def:'bulb',cam:{pos:V(5,3,7),target:V(0,2.6,0)},update(t,dt){const s=run(t,dt);bm.emissiveIntensity=.02+s.cur*2.6;sp.intensity=s.cur*3;pool.material.opacity=s.cur*.3;}};
+}
+
+function buildLadder(){
+ const root=new THREE.Group(),parts=[];const P=(...a)=>addPart(root,parts,...a);
+ const H=3.2,zf=y=>.9-.8*y/H,al=()=>M(0xc5ced9,.9,.3),rb=()=>M(0x111827,.2,.8);
+ const rails=grp(0,0,0);[-.5,.5].forEach(x=>rails.add(link(V(x,0,.9),V(x,H,.1),.06,al()),mesh(new THREE.CylinderGeometry(.09,.1,.08,12),rb(),x,.04,.9)));rails.add(mesh(new THREE.BoxGeometry(1.2,.06,.5),M(0x475569,.7,.4),0,H+.03,.1));
+ P('rails','Rangka Depan (Rel)',rails,V(-1.8,0,1.2),I('Rel utama tempat anak tangga terpasang dan tempat tubuh bertumpu.','Dua rel aluminium menahan beban; kaki karet mencegah tergelincir.','Rel bengkok atau retak: tangga miring dan bisa patah saat dinaiki.','rel bengkok, tangga miring'));
+ const steps=grp(0,0,0);for(let i=0;i<6;i++){const y=.5+i*.5;steps.add(mesh(new THREE.BoxGeometry(1,.06,.3),M(0xF97316,.4,.5),0,y,zf(y)))}
+ P('steps','Anak Tangga',steps,V(1.8,0,1.2),I('Pijakan kaki saat naik.','Permukaan bergerigi mencegah tergelincir dan menyalurkan beban ke kedua rel.','Anak tangga patah atau longgar: pijakan hilang dan berisiko jatuh.','anak tangga patah, berisiko jatuh'));
+ const rear=grp(0,H,.1);[-.5,.5].forEach(x=>rear.add(link(V(x,0,0),V(x,-H,-.9),.06,al()),mesh(new THREE.CylinderGeometry(.09,.1,.08,12),rb(),x,-H+.04,-.9)));
+ rear.add(link(V(-.5,-1.2,-.34),V(.5,-2,-.53),.03,al()),link(V(.5,-1.2,-.34),V(-.5,-2,-.53),.03,al()));
+ P('rear','Rangka Belakang (Kaki Silang)',rear,V(0,0,-2.4),I('Penopang yang membuat tangga berdiri stabil membentuk huruf A.','Kaki belakang miring berlawanan dengan rangka depan, dan palang silang menjaga kekakuan.','Kaki belakang bengkok: tangga goyang dan bisa terguling.','kaki belakang goyang'));
+ const lm=M(0x111111,0,.4,0x22ff88,2),hg=grp(0,0,0);hg.add(cylX(.09,1.3,STEEL(),0,H,.1),mesh(new THREE.BoxGeometry(.14,.3,.4),STEEL(),-.6,H-.05,.1),mesh(new THREE.BoxGeometry(.14,.3,.4),STEEL(),.6,H-.05,.1));
+ [-.5,.5].forEach(x=>{hg.add(link(V(x,1.6,.5),V(x,1.6,-.35),.03,STEEL()));const l=mesh(new THREE.BoxGeometry(.12,.12,.12),lm,x,1.6,.075);l.userData.noHl=1;hg.add(l)});
+ P('hinge','Engsel Pengunci',hg,V(0,1.8,0),I('Menyambung rangka depan dan belakang serta mengunci sudut buka tangga.','Engsel di puncak memungkinkan tangga dilipat; batang pengunci di tengah menahan agar kaki tidak melebar.','Pengunci tidak terkunci: kaki melebar, tangga goyang dan bisa roboh.','pengunci lepas, tangga goyang dan bisa roboh'));
+ const ball=mesh(new THREE.SphereGeometry(.22,16,16),M(0x06B6D4,.3,.4,0x06B6D4,.5));root.add(ball);
+ const W={hinge:1,rear:.6,rails:.4,steps:.25};let w=0;
+ return{root,parts,def:'hinge',cam:{pos:V(6,3.5,6.5),target:V(0,1.6,0)},update(t,dt){let tw=0;broken.forEach(id=>tw=Math.max(tw,W[id]||0));w+=(tw-w)*Math.min(1,dt*4);
+  rear.rotation.x=w*(.12+.12*Math.sin(t*3));lm.emissive.setHex(broken.has('hinge')?0xff2222:0x22ff88);
+  const y=.9+(.5+.5*Math.sin(t*.9))*1.8;ball.position.set(w*Math.sin(t*20)*.03,y+.3,zf(y));ball.visible=exC<.08;}};
+}
+
+const MODELS={engine:buildEngine,solar:buildSolar,motor:buildMotor,fan:buildFan,washer:buildWasher,iron:buildIron,blender:buildBlender,lamp:buildLamp,drill:buildDrill,pump:buildPump,fridge:buildFridge,oven:buildOven,pendant:buildPendant,ladder:buildLadder};
 const broken=new Set();let model=null,mode='normal',sel=null,hover=null,exT=0,exC=0;
 function setGoalToSel(){if(sel)tgtGoal=sel.base.clone().addScaledVector(sel.dir,exT).add(sel.obj.parent?sel.obj.parent.position:V(0,0,0));}
 function refreshUI(){
