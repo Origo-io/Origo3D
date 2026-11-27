@@ -38,6 +38,7 @@ input[type=range]{width:100%;accent-color:#06B6D4;height:1.4rem}
     <optgroup label="Peralatan Rumah"><option value="iron">♨ Setrika</option><option value="blender">🥤 Blender</option><option value="lamp">💡 Lampu Meja</option></optgroup>
     <optgroup label="Alat &amp; Perabot Tambahan"><option value="drill">🔧 Bor Tangan Listrik</option><option value="pump">💧 Pompa Air (Jet Pump)</option><option value="fridge">🧊 Kulkas</option><option value="oven">🔥 Oven Listrik</option><option value="pendant">🔆 Lampu Gantung</option><option value="ladder">📐 Tangga Lipat</option></optgroup>
     <optgroup label="Pembangkit Listrik"><option value="hydro">🌊 PLTA (Tenaga Air)</option><option value="wind">🌬 PLTB (Turbin Angin)</option><option value="coal">🏭 PLTU (Uap)</option><option value="gu">🔥 PLTGU (Gas &amp; Uap)</option><option value="geo">🌋 PLTP (Panas Bumi)</option><option value="nuke">⚛ PLTN (Nuklir)</option><option value="diesel">🛢 PLTD (Diesel)</option><option value="bio">🌿 PLTBm/Bg (Biomassa &amp; Biogas)</option><option value="wave">〰 PLTL (Gelombang Laut)</option><option value="waste">♻ PLTSa (Sampah)</option></optgroup>
+    <optgroup label="Komputer &amp; Periferal"><option value="pccase">🖥 Casing PC &amp; Motherboard</option><option value="cpu">🧠 CPU &amp; Cooler</option><option value="ram">💾 RAM (Memori)</option><option value="gpu">🎮 GPU / Kartu Grafis</option><option value="storage">💽 Storage (SSD &amp; HDD)</option><option value="psu">🔌 PSU (Power Supply)</option><option value="periph">🖱 Monitor, Keyboard &amp; Mouse</option><option value="laptop">💻 Laptop</option></optgroup>
   </select>
 </header>
 
@@ -612,7 +613,146 @@ function buildWaste(){const R=newR(),Q=mkQ(R);
  const tu=Tb(-2.4,1.3,-3,.6,0xcbd5e1,0x94a3b8);Q('tur','Turbin Uap',tu,[0,1.2,-1],...STM);const gn=Gn(-.4,1.3,-3);Q('gen','Generator',gn,[1.8,1.2,-1],...GEN);const sm=puffs(R,3.1,4.5,0);
  return flow(R,[[-6,1,0],[-3.9,1,0],[-2.2,2,0],[-2.2,3.2,0],[-2.4,2,-1.6],[-2.4,1.3,-3],[-.4,1.3,-3],[2.2,1.3,-3]],{bunker:.05,furnace:.2,filter:.2,boiler:.35,tur:.64,gen:.79},[{o:tu.userData.rot,u:.66,k:10},{o:gn.userData.rot,u:.81,k:10}],{pos:V(5,5.5,12),target:V(-1.5,1.8,-1)},'furnace',0xfdba74,(t,dt,c)=>{fm.emissiveIntensity=c>.2?.8+.4*Math.sin(t*7):.05;sm(t,c>.2)});}
 
-const MODELS={engine:buildEngine,solar:buildSolar,motor:buildMotor,fan:buildFan,washer:buildWasher,iron:buildIron,blender:buildBlender,lamp:buildLamp,drill:buildDrill,pump:buildPump,fridge:buildFridge,oven:buildOven,pendant:buildPendant,ladder:buildLadder,hydro:buildHydro,wind:buildWind,coal:buildCoal,gu:buildGU,geo:buildGeo,nuke:buildNuke,diesel:buildDiesel,bio:buildBio,wave:buildWave,waste:buildWaste};
+// ---------- KATALOG KOMPUTER & PERIFERAL ----------
+const fin=(R,def,cam,D,fn)=>{const run=runner(D);return Object.assign(R,{def,cam,update(t,dt){fn(run(t,dt),t,dt)}})};
+const hue=(m,t,k,on)=>{m.userData.be.setHSL((t*.15)%1,1,.5);m.userData.bi=on?k:0};
+const fanG=(r,col=0x1f2937)=>{const g=new THREE.Group();g.add(cylZ(r*.22,.08,M(0x111827,.5,.4)));for(let k=0;k<7;k++){const b=new THREE.Group(),bl=mesh(new THREE.BoxGeometry(r*.28,r*.7,.02),M(col,.3,.5),0,r*.55,0);bl.rotation.y=.4;b.add(bl);b.rotation.z=k*Math.PI*2/7;g.add(b)}return g};
+const scrn=(w,h)=>{const c=document.createElement('canvas');c.width=192;c.height=108;const g=c.getContext('2d'),tx=new THREE.CanvasTexture(c);tx.encoding=THREE.sRGBEncoding;
+ const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tx}));m.userData.noHl=1;
+ return{m,draw(t,on){if(!on){g.fillStyle='#050608';g.fillRect(0,0,192,108);g.strokeStyle='#ef4444';g.lineWidth=3;g.beginPath();g.moveTo(80,34);g.lineTo(112,74);g.moveTo(112,34);g.lineTo(80,74);g.stroke()}
+  else{const gr=g.createLinearGradient(0,0,192,108);gr.addColorStop(0,'#0b3a6e');gr.addColorStop(1,'#06B6D4');g.fillStyle=gr;g.fillRect(0,0,192,108);g.fillStyle='rgba(255,255,255,.88)';g.fillRect(14,12,100,64);g.fillStyle='#0B0F19';g.fillRect(14,12,100,10);
+   g.strokeStyle='#F97316';g.lineWidth=2;g.beginPath();for(let x=0;x<92;x++){const y=56+14*Math.sin((x+t*40)/9);x?g.lineTo(18+x,y):g.moveTo(18,y)}g.stroke();g.fillStyle='rgba(15,23,42,.85)';g.fillRect(0,96,192,12);g.fillStyle='#22d3ee';g.fillRect(4,99,10,6)}tx.needsUpdate=true}}};
+const keysI=(x0,y0,z0,p,rows,hk=.12)=>{const ks=[];rows.forEach((r,ri)=>{const tot=r.reduce((a,b)=>a+b,0);let x=-tot*p/2;r.forEach(w=>{ks.push({x:x0+x+w*p/2,z:z0+(ri-(rows.length-1)/2)*p,w:w*p-p*.12,m:w>1.1||ri==0});x+=w*p})});
+ const inst=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),M(0xffffff,.1,.6),ks.length),d=new THREE.Object3D(),col=new THREE.Color();
+ const set=(i,dn)=>{const k=ks[i];d.position.set(k.x,y0-dn*.04,k.z);d.scale.set(k.w,hk,p*.85);d.updateMatrix();inst.setMatrixAt(i,d.matrix)};
+ ks.forEach((k,i)=>{set(i,0);inst.setColorAt(i,col.setHex(k.m?0x6b7280:0xe5e7eb))});inst.frustumCulled=false;inst.castShadow=true;let last=-1;
+ return{inst,type(t,on){const ci=on?Math.floor(t*9)%ks.length:-1;if(ci!==last){if(last>=0)set(last,0);if(ci>=0)set(ci,1);last=ci;inst.instanceMatrix.needsUpdate=true}}}};
+const KROWS=[Array(14).fill(1),Array(14).fill(1),Array(13).fill(1),Array(12).fill(1),[1.3,1.3,1.3,6,1.3,1.3,1.3]];
+
+function buildPCCase(){const R=newR(),Q=mkQ(R);
+ const cs=grp(0,0,0),fr=mesh(new THREE.BoxGeometry(4.2,4.4,2),GLASS(0x334155,.12),0,2.2,0);fr.castShadow=false;const led=M(0x111111,0,.4,0xffffff,0);
+ cs.add(fr,edges(4.2,4.4,2,2.2,0x06B6D4),bx(4.2,4.4,.06,0x1f2937,0,2.2,-1,.6,.5),bx(4.2,.12,2,0x111827,0,.06,0),bx(4.2,.12,2,0x111827,0,4.34,0),bx(.1,4.4,2,0x111827,2.05,2.2,0),bx(4.1,.95,1.9,0x0f172a,0,.55,0),mesh(new THREE.BoxGeometry(.05,3.6,.08),led,2.12,2.2,.85));
+ const fans=[];[[1.9,3.4],[1.9,2.3],[-1.9,3.6]].forEach(([x,y])=>{const fg=grp(x,y,0),f=fanG(.5);fg.rotation.y=Math.PI/2;fg.add(f,mesh(new THREE.TorusGeometry(.52,.04,8,28),M(0x111827,.5,.4)));cs.add(fg);fans.push(f)});
+ const pn=grp(2.1,2.2,1.02),pg=mesh(new THREE.BoxGeometry(4.1,4.3,.05),GLASS(0x93c5fd,.22),-2.05,0,0);pg.castShadow=false;pn.add(pg);cs.add(pn);
+ Q('case','Casing & Rangka (Panel Samping Kaca)',cs,[0,0,-3],'Rangka pelindung yang menahan semua komponen PC dan mengatur aliran udara.','Panel samping kaca memperlihatkan isi PC; kipas depan memasukkan udara dingin dan kipas belakang membuang udara panas.','Casing sempit atau kipas mati: udara panas menumpuk dan komponen cepat panas.','aliran udara buruk, PC panas',true);
+ const bd=grp(0,0,0);bd.add(bx(3,2.9,.06,0x166534,0,2.45,-.85,.2,.6),bx(.2,1,.18,0x111827,-1.1,3.2,-.75),bx(1,.2,.18,0x111827,-.5,3.75,-.75),bx(.6,.6,.16,0x1e293b,.8,2,-.75),bx(.12,1.2,.5,0x9ca3af,-1.52,3.2,-.55,.8,.3),bx(.12,.6,.16,0xf1f5f9,1.4,2.8,-.77),cylZ(.14,.04,STEEL(),.2,1.5,-.8));
+ for(let i=0;i<4;i++)bd.add(bx(.1,1,.12,0x111827,.45+i*.15,3.2,-.77));
+ Q('board','Motherboard (PCB)',bd,[0,0,.6],'Papan induk yang menghubungkan semua komponen dan mengatur data serta daya.','Jalur tembaga pada PCB menyalurkan data antara CPU, RAM, kartu grafis, dan penyimpanan; VRM mengatur tegangan CPU.','Papan rusak: PC tidak mau menyala atau komponen tidak terdeteksi.','motherboard rusak, PC mati total');
+ const sk=grp(0,0,0);sk.add(bx(.95,.95,.1,0xd1d5db,-.4,3.2,-.77,.8,.3),bx(.7,.7,.05,0x111827,-.4,3.2,-.71),pp([-.9,2.75,-.7],[-.9,3.65,-.7],0x9ca3af,.03));
+ Q('socket','Socket CPU',sk,[0,1.2,2.4],'Dudukan tempat CPU dipasang dan terhubung ke motherboard.','Pin atau pad kontak menyentuh CPU, lalu tuas pengunci menekan CPU agar kontaknya rapat.','Pin bengkok: CPU tidak terbaca dan PC gagal booting.','socket CPU rusak, CPU tidak terbaca');
+ const sl=grp(0,0,0);sl.add(bx(2.3,.12,.14,0x111827,-.1,1.4,-.77),bx(2.3,.03,.15,0xd4a73a,-.1,1.35,-.77,.9,.3),bx(.9,.1,.14,0x111827,-.8,1.85,-.77),bx(.1,.14,.2,0xdc2626,1.05,1.4,-.77),bx(2.3,.12,.14,0x111827,-.1,2.3,-.77));
+ Q('slots','Slot Ekspansi PCIe',sl,[0,-.6,2.2],'Slot tempat memasang kartu tambahan seperti kartu grafis.','Jalur PCIe berkecepatan tinggi (kontak emas); kartu dikunci oleh klip di ujung slot.','Kontak kotor atau patah: kartu tidak terdeteksi atau layar blank.','slot PCIe rusak, kartu tidak terdeteksi');
+ return fin(R,'socket',{pos:V(6,4.5,9),target:V(0,2.2,0)},{case:{s:.7,st:1},board:{s:0},socket:{s:0},slots:{s:.5,st:1}},(S,t,dt)=>{fans.forEach(f=>f.rotation.z=S.ang*12);hue(led,t,S.cur*1.6,S.cur>.05);swing(pn,dt,broken.has('case')?1.3:0)});}
+
+function buildCPU(){const R=newR(),Q=mkQ(R);
+ const sk=grp(0,0,0);sk.add(bx(2.4,.12,2.4,0x374151,0,.06,0),bx(1.7,.08,1.7,0xd1d5db,0,.16,0,.8,.3),bx(1.3,.06,1.3,0x111827,0,.2,0),bx(.12,.1,2,0x9ca3af,-1,.2,0,.8,.3));
+ Q('socket','Soket CPU',sk,[0,-.3,0],'Dudukan CPU pada motherboard.','Pad kontak menyentuh bagian bawah CPU, lalu tuas pengunci menekannya rapat.','Pin bengkok: CPU tidak terbaca dan PC gagal booting.','soket CPU rusak, CPU tidak terbaca');
+ const ihM=M(0xcbd5e1,.95,.2,0xff3b00,0),cp=grp(0,0,0);cp.add(bx(1.5,.05,1.5,0x15803d,0,.26,0,.2,.6),mesh(new THREE.BoxGeometry(1,.1,1),ihM,0,.35,0),bx(.6,.005,.05,0x6b7280,0,.405,.1),bx(.4,.005,.05,0x6b7280,0,.405,-.1),bx(.14,.01,.14,0xd4a73a,-.62,.29,-.62));
+ Q('cpu','CPU / Prosesor (dengan IHS)',cp,[0,1.2,0],'Otak komputer yang menjalankan perintah program.','Miliaran transistor dalam chip menghitung data; IHS (penutup logam) menyebarkan panas ke cooler.','Terlalu panas atau rusak: PC melambat (throttling), restart sendiri, atau mati.','CPU terlalu panas, performa turun');
+ const fm=M(0xcbd5e1,.9,.3,0xff4500,0),hs=grp(0,0,0);hs.add(bx(1.3,.14,1.3,0xb45309,0,.5,0,.9,.3));[-.45,-.15,.15,.45].forEach(x=>hs.add(cy(.06,.06,2.6,0xb45309,x,1.8,0,.9,.3)));
+ for(let i=0;i<22;i++)hs.add(mesh(new THREE.BoxGeometry(1.9,.035,1.3),fm,0,.78+i*.1,0));hs.add(bx(1.9,.05,1.3,0x1f2937,0,2.98,0));
+ Q('sink','Heatsink Tower (Sirip & Heatpipe)',hs,[0,2.6,0],'Menyerap panas CPU lalu membuangnya ke udara.','Heatpipe tembaga memindahkan panas dari dasar ke sirip aluminium yang luas permukaannya, lalu kipas meniupnya.','Pasta termal kering atau sirip tersumbat debu: panas menumpuk dan CPU melambat.','heatsink tidak efektif, CPU panas');
+ const fn=grp(0,0,0),rot=fanG(.7);rot.position.set(0,1.84,.85);fn.add(rot,bx(1.6,.1,.2,0x1f2937,0,1.09,.85),bx(1.6,.1,.2,0x1f2937,0,2.59,.85),bx(.1,1.5,.2,0x1f2937,-.8,1.84,.85),bx(.1,1.5,.2,0x1f2937,.8,1.84,.85));
+ Q('fan','Kipas Pendingin',fn,[0,.6,2.6],'Meniupkan udara melewati sirip heatsink.','Baling-baling berputar mengalirkan udara dingin menembus sirip dan membawa pergi panas.','Kipas macet: sirip tidak terdinginkan dan suhu CPU naik cepat.','kipas CPU mati, suhu naik');
+ let heat=.15,fs=1;
+ return Object.assign(R,{def:'fan',cam:{pos:V(4.5,3.5,6),target:V(0,1.4,0)},update(t,dt){const hot=broken.has('sink')||broken.has('fan');heat+=((hot?1:broken.has('cpu')?.6:.15)-heat)*Math.min(1,dt*.8);fs+=((broken.has('fan')||broken.has('socket')?0:1)-fs)*Math.min(1,dt*3);rot.rotation.z+=fs*dt*14;ihM.userData.bi=heat*1.3;fm.userData.bi=heat*.5}});}
+
+function buildRAM(){const R=newR(),Q=mkQ(R);
+ const pc=grp(0,0,0);pc.add(bx(3.2,.85,.05,0x166534,0,.6,0,.2,.6));[-1.2,-.5,.5,1.2].forEach(x=>[-.04,.04].forEach(z=>pc.add(bx(.5,.3,.03,0x111827,x,.6,z*1.05,.3,.5))));pc.add(bx(.2,.12,.03,0x9ca3af,.9,.28,.04));
+ Q('pcb','Chip Memori & PCB',pc,[0,0,2],'Papan tempat chip memori tertanam.','Chip DRAM menyimpan data sementara selama PC menyala; PCB menghubungkannya ke pin konektor.','Chip rusak: PC crash, layar biru, atau gagal booting.','chip RAM rusak, PC sering crash');
+ const rg=M(0x111111,0,.4,0xffffff,0),sp=grp(0,0,0);sp.add(bx(3.2,.8,.03,0x64748b,0,.68,.09,.9,.3),bx(3.2,.8,.03,0x64748b,0,.68,-.09,.9,.3),bx(3,.1,.2,0x475569,0,1.1,0,.9,.3),mesh(new THREE.BoxGeometry(2.8,.06,.22),rg,0,1.17,0));
+ Q('spreader','Heatspreader (dengan Lampu RGB)',sp,[0,1.8,0],'Penutup logam yang menyebarkan panas chip memori.','Pelat aluminium menyentuh chip dan melepas panas ke udara; sering dilengkapi lampu RGB.','Lepas atau kotor: chip lebih panas dan kurang stabil.','heatspreader longgar, RAM panas');
+ const pn=[],pi=grp(0,0,0);for(let i=0;i<24;i++){if(i==12)continue;const m=M(0xd4a73a,.9,.3,0x22d3ee,0);pn.push(m);pi.add(mesh(new THREE.BoxGeometry(.06,.2,.03),m,-1.45+i*.125,.15,0))}
+ Q('pins','Pin Konektor Emas',pi,[0,-.9,1],'Kontak emas yang menyambungkan RAM ke slot.','Pin emas tahan karat menyalurkan data dan daya saat modul dipasang ke slot DIMM.','Kotor atau korosi: RAM tidak terdeteksi dan PC berbunyi bip.','pin kotor, RAM tidak terdeteksi');
+ const sl=grp(0,0,0);sl.add(bx(3.4,.3,.3,0x1f2937,0,0,0),bx(.12,.5,.15,0xe5e7eb,-1.78,.3,0),bx(.12,.5,.15,0xe5e7eb,1.78,.3,0));
+ Q('slot','Slot DIMM',sl,[0,-.4,-2],'Dudukan modul RAM di motherboard.','Klip di ujung slot mengunci modul; takik memastikan arah pemasangan benar.','Slot rusak: modul tidak terbaca walau RAM sehat.','slot RAM rusak');
+ return fin(R,'pins',{pos:V(3,2.5,5.5),target:V(0,.6,0)},{pcb:{s:0},spreader:{s:.5,st:1},pins:{s:.3,st:1},slot:{s:0}},(S,t)=>{hue(rg,t,S.cur*1.6,S.cur>.05);pn.forEach((m,i)=>m.userData.bi=S.cur*(.5+.5*Math.sin(t*6-i*.5))*1.4)});}
+
+function buildGPU(){const R=newR(),Q=mkQ(R);
+ const led=M(0x111111,0,.4,0xffffff,0),lg=M(0x042f2e,0,.4,0x06B6D4,.8);
+ const sh=grp(0,0,0);sh.add(bx(4.6,1.5,.12,0x1f2937,0,.8,.32,.4,.5),mesh(new THREE.BoxGeometry(4.4,.05,.05),led,0,1.58,.4),bx(1.2,.1,.02,0xF97316,1.6,.2,.39));
+ Q('shroud','Bodi Shroud',sh,[0,0,3],'Penutup yang mengarahkan aliran udara dan melindungi komponen.','Cangkang plastik mengarahkan udara dari kipas ke sirip heatsink.','Retak atau penyok: aliran udara terganggu dan kartu lebih panas.','shroud rusak, aliran udara terganggu');
+ const fs=grp(0,0,0),rots=[];[-1.5,0,1.5].forEach(x=>{const f=fanG(.5,0x374151);f.position.set(x,.8,.42);fs.add(f,mesh(new THREE.TorusGeometry(.52,.04,8,28),M(0x9ca3af,.8,.3),x,.8,.4));rots.push(f)});
+ Q('fans','Kipas Pendingin (3 Kipas)',fs,[0,1,1.8],'Mendinginkan GPU.','Kipas meniupkan udara melewati sirip heatsink; saat beban ringan kipas bisa berhenti.','Kipas macet: suhu GPU melonjak dan frame rate turun.','kipas GPU mati, suhu naik');
+ const hs=grp(0,0,0);hs.add(bx(1.2,.1,.8,0xb45309,-.5,.8,-.1,.9,.3));for(let i=0;i<30;i++)hs.add(bx(.03,1.3,.5,0xb0bec5,-2.1+i*.145,.8,-.1,.9,.3));[.35,.65,.95,1.25].forEach(y=>hs.add(cylX(.05,4,M(0xb45309,.9,.3),0,y,0)));
+ Q('sink','Heatsink (Sirip & Heatpipe)',hs,[0,0,.6],'Menyerap panas GPU.','Heatpipe tembaga memindahkan panas ke tumpukan sirip aluminium yang ditiup kipas.','Tersumbat debu atau pasta kering: GPU overheat dan melambat.','heatsink GPU tidak efektif');
+ const bk=grp(0,0,0);bk.add(bx(4.4,1.45,.06,0x374151,0,.8,-.5,.8,.3),mesh(new THREE.BoxGeometry(1.2,.12,.01),lg,0,.8,-.53));
+ Q('back','Backplate',bk,[0,0,-2.6],'Melindungi PCB dan membantu membuang panas.','Pelat logam di belakang menguatkan kartu agar tidak melengkung dan menyalurkan panas ke udara.','Terlepas: PCB mudah melengkung dan kurang terdinginkan.','backplate lepas, PCB melengkung');
+ const pb=grp(0,0,0);pb.add(bx(4.3,1.3,.05,0x166534,0,.8,-.42,.2,.6),bx(2.2,.18,.03,0xd4a73a,.3,-.02,-.42,.9,.3),bx(.05,1.6,.8,0x9ca3af,-2.35,.8,-.1,.8,.3),bx(.5,.2,.25,0x111827,1.5,1.5,-.3));[0,.3,.6,.9].forEach(y=>pb.add(bx(.06,.14,.28,0x0b0f19,-2.36,.45+y,-.1)));
+ Q('pcb','PCB, Konektor PCIe & Port Display',pb,[0,-1.2,-1],'Papan sirkuit GPU, konektor PCIe, dan port monitor.','GPU memproses grafis lalu mengirim hasilnya ke monitor lewat HDMI/DisplayPort; konektor PCIe emas terhubung ke motherboard.','Rusak: layar blank, gambar berartefak, atau kartu tidak terdeteksi.','PCB GPU rusak, layar blank');
+ return fin(R,'fans',{pos:V(3,2.5,6.5),target:V(0,.8,0)},{shroud:{s:.7,st:1},fans:{s:.3,st:1},sink:{s:.5,st:1},back:{s:.9},pcb:{s:0}},(S,t)=>{rots.forEach(f=>f.rotation.z=S.ang*12);hue(led,t,S.cur*1.6,S.cur>.05)});}
+
+function buildStorage(){const R=newR(),Q=mkQ(R);
+ const dl=M(0x111111,0,.4,0x22ff88,0),m2=grp(0,0,0);m2.add(bx(3.2,.06,.9,0x111827,-5,.04,0,.2,.6),bx(.7,.08,.55,0x1f2937,-4.4,.1,0),bx(.7,.08,.55,0x1f2937,-3.7,.1,0),bx(.5,.07,.5,0x9ca3af,-5.5,.1,0,.8,.3),bx(1,.01,.5,0xe5e7eb,-4.1,.145,0),bx(.18,.07,.7,0xd4a73a,-6.5,.04,0,.9,.3),mesh(new THREE.SphereGeometry(.05,10,10),dl,-3.6,.1,.36));
+ Q('m2','SSD M.2 NVMe',m2,[0,1.6,0],'SSD kecil super cepat yang menempel langsung di motherboard.','Chip NAND menyimpan data tanpa bagian bergerak; controller mengatur lalu lintas data lewat jalur PCIe (NVMe).','Rusak: sistem tidak bisa booting atau data hilang.','SSD M.2 rusak, data tidak terbaca');
+ const sd=grp(0,0,0);sd.add(bx(2.8,.28,1.95,0x94a3b8,-1.3,.16,0,.9,.3),bx(2.2,.01,1.4,0x1f2937,-1.3,.31,0),bx(.35,.18,.7,0x111827,-2.85,.15,.5),bx(.35,.18,1.1,0x111827,-2.85,.15,-.5),mesh(new THREE.SphereGeometry(.05,10,10),dl,-.1,.16,.98));
+ Q('ssd','SSD SATA 2,5 inci',sd,[0,1.2,0],'Penyimpanan SSD tipis berbentuk 2,5 inci.','Chip NAND dalam casing aluminium; terhubung lewat kabel data dan daya SATA.','Rusak: PC lambat atau drive tidak terdeteksi.','SSD SATA rusak, tidak terdeteksi');
+ const hb=grp(0,0,0),cv=mesh(new THREE.BoxGeometry(4.2,.04,2.9),GLASS(0x94a3b8,.3),4.2,.62,0);cv.castShadow=false;hb.add(bx(4.2,.12,2.9,0x6b7280,4.2,.06,0,.8,.4),cv,bx(4.2,.5,.08,0x94a3b8,4.2,.3,1.41,.8,.4),bx(4.2,.5,.08,0x94a3b8,4.2,.3,-1.41,.8,.4),bx(.08,.5,2.9,0x94a3b8,2.15,.3,0,.8,.4),bx(.08,.5,2.9,0x94a3b8,6.25,.3,0,.8,.4),bx(1.4,.01,1,0xe5e7eb,5.4,.65,-.8),bx(3.6,.03,2.4,0x166534,4.2,-.03,0,.2,.6),bx(.2,.25,1.4,0x111827,6.4,.15,0));
+ Q('hddbody','Bodi & PCB HDD',hb,[0,0,2.8],'Bodi dan elektronik pengendali HDD.','Casing aluminium menjaga debu dan menahan getaran; PCB di bawahnya mengatur motor dan kepala baca.','PCB rusak: drive tidak berputar atau tidak terdeteksi.','bodi atau PCB HDD rusak',true);
+ const pl=grp(3.6,.3,0);pl.add(cy(.3,.3,.4,0x94a3b8,0,0,0,.9,.3));[-.15,0,.15].forEach(y=>pl.add(cy(1,1,.03,0xcbd5e1,0,y,0,1,.15)));
+ Q('platter','Piringan Magnetik (Platter)',pl,[0,1.4,0],'Piringan magnetik tempat data disimpan.','Motor memutar piringan ribuan putaran per menit; data tersimpan sebagai pola magnet.','Macet: drive tidak berputar dan data tidak terbaca.','piringan macet, drive tidak berputar');
+ const ar=grp(5.5,.3,.9);ar.add(bx(1.8,.04,.14,0x9ca3af,-.9,0,0,.9,.3),bx(.12,.03,.1,0x111827,-1.8,-.03,0),bx(.7,.18,.5,0xdc2626,.4,0,0),bx(.9,.05,.8,0x6b7280,.3,.12,0,.8,.3),cy(.08,.08,.4,0x94a3b8,0,0,0));
+ Q('arm','Lengan Baca-Tulis',ar,[0,2.4,0],'Lengan baca-tulis HDD.','Lengan menyapu permukaan piringan; kepala di ujungnya membaca dan menulis data.','Macet: terdengar bunyi klik dan data sulit dibaca.','lengan macet, drive berbunyi klik');
+ let hv=0;
+ return Object.assign(R,{def:'arm',cam:{pos:V(2,8,11),target:V(-.2,0,0)},update(t,dt){const tg=broken.has('platter')?0:broken.has('hddbody')?.5:1;hv+=(tg-hv)*Math.min(1,dt*2);pl.rotation.y+=hv*dt*14;
+  ar.rotation.y=Math.sin(t*3.1)*.2*hv*(broken.has('arm')?Math.max(0,Math.sin(t*9))*.5:1);dl.userData.bi=(!broken.has('m2')&&!broken.has('ssd'))&&Math.sin(t*14)>0?2:0}});}
+
+function buildPSU(){const R=newR(),Q=mkQ(R);
+ const ps=grp(0,0,0),bg=mesh(new THREE.BoxGeometry(3,1.7,2.8),GLASS(0x334155,.22),0,.85,0);bg.castShadow=false;const lm=M(0x111111,0,.4,0x22ff88,2);
+ ps.add(bg,edges(3,1.7,2.8,.85,0x06B6D4),bx(3,.06,2.8,0x111827,0,.03,0),bx(2.8,1.2,.05,0x0f172a,0,.85,1.4),mesh(new THREE.SphereGeometry(.05,10,10),lm,1.3,1.45,1.43));
+ for(let i=0;i<5;i++)ps.add(bx(.3,.18,.06,0x111827,-1.2+i*.6,.55,1.42),bx(.3,.18,.06,0x111827,-1.2+i*.6,1.1,1.42));
+ Q('body','Bodi PSU',ps,[0,0,-2.2],'Rumah yang mengubah listrik AC menjadi DC untuk komponen PC.','Listrik rumah masuk ke PSU lalu diturunkan dan diubah menjadi 12V, 5V, dan 3,3V.','Korsleting: PC mati total dan komponen bisa rusak.','PSU rusak, PC mati total',true);
+ const fg=grp(0,1.72,0),rot=fanG(.65);fg.rotation.x=-Math.PI/2;fg.add(rot,bx(2.6,.05,.04,0x1f2937),bx(.04,.05,2.6,0x1f2937));[.3,.55,.8,1.05].forEach(r=>fg.add(mesh(new THREE.TorusGeometry(r,.015,6,32),M(0x1f2937,.5,.4))));
+ Q('fan','Kipas Ventilasi',fg,[0,2.4,0],'Mendinginkan komponen dalam PSU.','Kipas menarik udara keluar sehingga panas dari trafo dan heatsink terbuang.','Kipas mati: PSU panas dan mematikan diri.','kipas PSU mati, PSU panas');
+ const it=grp(0,0,0),tf=mesh(new THREE.TorusGeometry(.34,.15,12,24),M(0xb45309,.9,.3),-.8,.4,-.5);tf.rotation.x=Math.PI/2;it.add(bx(2.8,.04,2.5,0x166534,0,.1,-.05,.2,.6),tf);[.2,.7,1.15].forEach(x=>it.add(cy(.2,.2,.55,0x1d4ed8,x,.4,-.9,.4,.4)));for(let i=0;i<10;i++)it.add(bx(.04,.8,.9,0xcbd5e1,-1.35+i*.1,.5,.4,.9,.3));
+ Q('internals','Komponen Dalam (Trafo, Kapasitor, Heatsink)',it,[-2.6,.8,0],'Trafo, kapasitor, dan heatsink pengubah daya.','Trafo menurunkan tegangan; kapasitor meratakan arus; heatsink membuang panas komponen.','Kapasitor menggembung atau trafo rusak: tegangan tidak stabil dan PC restart sendiri.','kapasitor atau trafo rusak, tegangan tidak stabil');
+ const cb=grp(0,0,0),cs=[],cl=[0xfacc15,0xef4444,0x3b82f6,0x22c55e,0x9ca3af],pl=[];
+ cl.forEach((c,i)=>{const x=-1.2+i*.6,cu=new THREE.CatmullRomCurve3([V(x,.55,1.45),V(x,.55,2.1),V(x*1.3,.35,2.9),V(x*1.4,.15,3.4)]);cb.add(mesh(new THREE.TubeGeometry(cu,30,.05,8),M(c,.1,.7)),bx(.35,.2,.4,0x111827,x*1.4,.15,3.5));cs.push(cu);
+  const p=new THREE.Mesh(new THREE.SphereGeometry(.07,8,8),new THREE.MeshBasicMaterial({color:0x7dfaff}));p.userData.noHl=1;p.userData.skip=1;p.raycast=()=>{};cb.add(p);pl.push(p)});
+ Q('cables','Kabel Modular & Konektor',cb,[0,0,2.4],'Menyalurkan daya ke motherboard, CPU, GPU, dan drive.','Kabel modular dicolok ke port PSU hanya sesuai kebutuhan; tiap perangkat memakai konektor yang berbeda.','Longgar atau putus: perangkat tidak mendapat daya.','kabel daya bermasalah, perangkat tidak menyala');
+ return fin(R,'cables',{pos:V(5,4,8),target:V(0,1,.8)},{body:{s:0},fan:{s:.5,st:1},internals:{s:0},cables:{s:0}},(S,t)=>{rot.rotation.z=S.ang*12;lm.userData.be.setHex(S.cur>.05?0x22ff88:0xff2222);pl.forEach((p,i)=>{p.visible=S.cur>.05;p.position.copy(cs[i].getPointAt((t*.4+i*.2)%1))})});}
+
+function buildPeriph(){const R=newR(),Q=mkQ(R);
+ const sc=scrn(3.8,2.1);sc.m.position.set(0,2.35,-1.12);const pl=M(0x111111,0,.4,0x22ff88,2);
+ const mn=grp(0,0,0);mn.add(bx(4,2.3,.14,0x111827,0,2.35,-1.2,.5,.5),bx(1.4,1.2,.2,0x1f2937,0,2.35,-1.37),sc.m,mesh(new THREE.SphereGeometry(.03,8,8),pl,1.7,1.3,-1.12));
+ const pm=Q('monitor','Monitor Layar Datar',mn,[0,1.6,0],'Menampilkan gambar dari komputer.','Panel layar datar menyalakan jutaan piksel dengan lampu latar; sinyal diterima lewat kabel HDMI atau DisplayPort.','Panel rusak: layar hitam atau bergaris.','layar monitor mati');
+ const sd=grp(0,0,0);sd.add(bx(.35,1.2,.2,0x374151,0,.7,-1.3,.8,.3),bx(2.2,.08,1.1,0x4b5563,0,.04,-1.2,.8,.3));
+ Q('stand','Stand / Kaki Monitor',sd,[0,0,-2.4],'Menopang monitor dan mengatur posisinya.','Leher dan dasar yang berat menahan monitor agar stabil dan tidak jatuh.','Longgar atau patah: monitor goyang atau jatuh.','kaki monitor goyang');
+ const kb=grp(0,0,0),ug=M(0x111111,0,.4,0xffffff,0);kb.add(bx(4.4,.2,1.5,0x1f2937,-.4,.1,2.2,.5,.5),mesh(new THREE.BoxGeometry(4.2,.03,.04),ug,-.4,.06,2.97));
+ Q('kbd','Bodi & Plat Keyboard',kb,[0,0,2.6],'Rangka dan plat saklar keyboard.','Plat menopang saklar di bawah tiap tombol dan papan sirkuit mengirim sinyal ke komputer.','Papan rusak: banyak tombol tidak terbaca.','keyboard rusak, tombol tidak terbaca');
+ const kk=keysI(-.4,.26,2.2,.29,KROWS),kg=grp(0,0,0);kg.add(kk.inst);
+ Q('keys','Keycaps',kg,[0,1.4,0],'Tombol untuk mengetik.','Tiap keycap menekan saklar; saat ditekan, sirkuit tersambung dan karakter dikirim ke komputer.','Keycap lepas atau saklar macet: huruf tidak muncul atau muncul dobel.','keycap rusak, huruf tidak muncul');
+ const ms=grp(3.4,0,2.2),sh=mesh(new THREE.SphereGeometry(.55,24,16),M(0x1f2937,.3,.45),0,.22,0),ml=M(0x2a0000,0,.4,0xff2222,1);sh.scale.set(.9,.5,1.5);
+ ms.add(sh,bx(.3,.05,.5,0x374151,-.17,.45,-.4),bx(.3,.05,.5,0x374151,.17,.45,-.4),bx(.02,.02,.5,0x111827,0,.47,-.4),mesh(new THREE.SphereGeometry(.07,10,10),ml,0,.03,0));
+ const pmo=Q('mouse','Mouse Ergonomis',ms,[2,0,.8],'Menggerakkan kursor di layar.','Sensor optik di bawah mouse membaca permukaan; gerakan diubah menjadi koordinat kursor.','Sensor kotor atau rusak: kursor melompat atau tidak bergerak.','sensor mouse rusak, kursor tidak bergerak');
+ const wg=grp(3.4,.5,1.75),wr=cylX(.1,.09,M(0x0b0f19,.3,.6));wg.add(wr);
+ const pw=Q('wheel','Scroll Wheel',wg,[0,1.6,.8],'Menggulir halaman.','Roda berputar dan encoder menghitung putarannya.','Macet: halaman tidak bisa digulir.','scroll wheel macet');
+ return Object.assign(R,{def:'monitor',cam:{pos:V(3,4.5,9),target:V(1,1.2,1)},update(t,dt){const on=!broken.has('monitor');sc.draw(t,on);pl.userData.be.setHex(on?0x22ff88:0xff2222);
+  pm.obj.rotation.z=broken.has('stand')?Math.sin(t*5)*.03:0;
+  const typ=!broken.has('kbd')&&!broken.has('keys');kk.type(t,typ);hue(ug,t,typ?1.5:0,typ);
+  const mv=!broken.has('mouse'),th=mv?.25*Math.sin(.7*t):0,mx=3.4+(mv?.35*Math.sin(.7*t):0),mz=2.2+(mv?.25*Math.cos(.5*t):0);
+  pmo.base.set(mx,0,mz);ms.rotation.y=th;pw.base.set(mx-.45*Math.sin(th)*(-1)*-1,.5,mz-.45*Math.cos(th));wg.rotation.y=th;ml.userData.bi=mv?1.2:0;if(!broken.has('wheel')&&mv)wr.rotation.x+=dt*5}});}
+
+function buildLaptop(){const R=newR(),Q=mkQ(R);
+ const bs=grp(0,0,0),ch=mesh(new THREE.BoxGeometry(4.2,.28,2.8),GLASS(0x334155,.2),0,.14,0);ch.castShadow=false;const fr=fanG(.35,0x9ca3af);fr.rotation.x=-Math.PI/2;fr.position.set(-1.2,.14,-.9);
+ bs.add(ch,edges(4.2,.28,2.8,.14,0x06B6D4),bx(4.2,.04,2.8,0x1f2937,0,.02,0),bx(2.8,.03,1.5,0x166534,0,.1,-.5,.2,.6),bx(2.8,.06,.9,0x334155,0,.09,.85),fr,pp([-1.2,.14,-.9],[.5,.12,-.6],0xb45309,.04),bx(.35,.04,.35,0x9ca3af,.5,.13,-.6,.8,.3));
+ Q('base','Bodi Base (Baterai, Motherboard & Kipas)',bs,[0,0,0],'Bodi bawah laptop berisi motherboard, baterai, dan kipas.','Komponen ditempatkan rapat; kipas dan heatpipe membuang panas lewat ventilasi.','Ventilasi tersumbat atau baterai rusak: laptop panas atau cepat mati.','laptop panas, baterai atau kipas bermasalah',true);
+ const kk=keysI(0,.36,-.25,.27,KROWS,.1),dk=grp(0,0,0);dk.add(bx(4.2,.04,2.8,0x334155,0,.3,0,.6,.4),kk.inst);
+ Q('keyboard','Keyboard & Deck',dk,[0,1.2,0],'Keyboard di atas bodi laptop.','Tombol tipis menekan membran sirkuit di bawahnya saat diketik.','Keyboard rusak: sebagian tombol tidak berfungsi.','keyboard laptop rusak');
+ const tg=M(0x042f2e,0,.4,0x22d3ee,1),tp=grp(0,0,0),fg=mesh(new THREE.SphereGeometry(.05,10,10),tg,0,.34,1);tp.add(bx(1.5,.02,.9,0x9ca3af,0,.33,1,.8,.3),fg);
+ Q('trackpad','Trackpad',tp,[0,2.2,1.2],'Pengganti mouse yang peka sentuhan.','Sensor kapasitif membaca posisi jari lalu mengubahnya menjadi gerakan kursor.','Rusak: kursor tidak bergerak atau tidak bisa klik.','trackpad rusak');
+ const hg=grp(0,0,0);[-1.6,1.6].forEach(x=>hg.add(cylX(.1,.8,STEEL(),x,.4,-1.4),bx(.5,.12,.3,0x374151,x,.34,-1.3)));
+ Q('hinge','Engsel (Hinge)',hg,[0,.8,-1.5],'Engsel yang menahan layar pada sudut yang diinginkan.','Poros dan klem pegas menahan gesekan sehingga layar tidak jatuh.','Longgar atau patah: layar jatuh atau goyang dan kabel layar bisa putus.','engsel patah, layar jatuh');
+ const sc=scrn(3.8,2.4),cm=M(0x111111,0,.4,0x22ff88,2),lid=grp(0,.46,-1.4);sc.m.position.set(0,1.4,.062);lid.rotation.x=Math.PI/2;
+ lid.add(bx(4.2,2.8,.08,0x334155,0,1.4,0,.8,.3),bx(4,2.6,.02,0x0b0f19,0,1.4,.05),sc.m,mesh(new THREE.SphereGeometry(.03,8,8),cm,0,2.65,.065));
+ Q('lid','Layar / Lid',lid,[0,0,-2.4],'Layar dan penutup laptop.','Panel LCD dilindungi bezel dan penutup belakang; kamera di tengah bagian atas.','Layar pecah atau kabel layar putus: gambar hilang.','layar laptop mati');
+ let lv=Math.PI/2,fs=1;
+ return Object.assign(R,{def:'hinge',cam:{pos:V(5.5,4.2,8),target:V(0,1.3,0)},update(t,dt){const tg=broken.has('hinge')?.55:-.25;lv+=(tg-lv)*Math.min(1,dt*2.5);lid.rotation.x=lv;
+  const on=!broken.has('lid')&&lv<1;sc.draw(t,on);cm.userData.be.setHex(on?0x22ff88:0xff2222);
+  fs+=((broken.has('base')?0:1)-fs)*Math.min(1,dt*3);fr.rotation.z+=fs*dt*16;const ty=!broken.has('keyboard');kk.type(t,ty&&lv<1);
+  fg.position.x=Math.sin(t*1.7)*.5;fg.position.z=1+Math.sin(t*2.3)*.25;fg.visible=!broken.has('trackpad')}});}
+
+const MODELS={engine:buildEngine,solar:buildSolar,motor:buildMotor,fan:buildFan,washer:buildWasher,iron:buildIron,blender:buildBlender,lamp:buildLamp,drill:buildDrill,pump:buildPump,fridge:buildFridge,oven:buildOven,pendant:buildPendant,ladder:buildLadder,hydro:buildHydro,wind:buildWind,coal:buildCoal,gu:buildGU,geo:buildGeo,nuke:buildNuke,diesel:buildDiesel,bio:buildBio,wave:buildWave,waste:buildWaste,pccase:buildPCCase,cpu:buildCPU,ram:buildRAM,gpu:buildGPU,storage:buildStorage,psu:buildPSU,periph:buildPeriph,laptop:buildLaptop};
 const broken=new Set();let model=null,mode='normal',sel=null,hover=null,exT=0,exC=0;
 function setGoalToSel(){if(sel)tgtGoal=sel.base.clone().addScaledVector(sel.dir,exT).add(sel.obj.parent?sel.obj.parent.position:V(0,0,0));}
 function refreshUI(){
