@@ -37,6 +37,7 @@ input[type=range]{width:100%;accent-color:#06B6D4;height:1.4rem}
     <optgroup label="Elektromekanik"><option value="motor">🔩 Dinamo (Motor Listrik)</option><option value="fan">🌀 Kipas Angin</option><option value="washer">🧺 Mesin Cuci</option></optgroup>
     <optgroup label="Peralatan Rumah"><option value="iron">♨ Setrika</option><option value="blender">🥤 Blender</option><option value="lamp">💡 Lampu Meja</option></optgroup>
     <optgroup label="Alat &amp; Perabot Tambahan"><option value="drill">🔧 Bor Tangan Listrik</option><option value="pump">💧 Pompa Air (Jet Pump)</option><option value="fridge">🧊 Kulkas</option><option value="oven">🔥 Oven Listrik</option><option value="pendant">🔆 Lampu Gantung</option><option value="ladder">📐 Tangga Lipat</option></optgroup>
+    <optgroup label="Pembangkit Listrik"><option value="hydro">🌊 PLTA (Tenaga Air)</option><option value="wind">🌬 PLTB (Turbin Angin)</option><option value="coal">🏭 PLTU (Uap)</option><option value="gu">🔥 PLTGU (Gas &amp; Uap)</option><option value="geo">🌋 PLTP (Panas Bumi)</option><option value="nuke">⚛ PLTN (Nuklir)</option><option value="diesel">🛢 PLTD (Diesel)</option><option value="bio">🌿 PLTBm/Bg (Biomassa &amp; Biogas)</option><option value="wave">〰 PLTL (Gelombang Laut)</option><option value="waste">♻ PLTSa (Sampah)</option></optgroup>
   </select>
 </header>
 
@@ -450,7 +451,168 @@ function buildLadder(){
   const y=.9+(.5+.5*Math.sin(t*.9))*1.8;ball.position.set(w*Math.sin(t*20)*.03,y+.3,zf(y));ball.visible=exC<.08;}};
 }
 
-const MODELS={engine:buildEngine,solar:buildSolar,motor:buildMotor,fan:buildFan,washer:buildWasher,iron:buildIron,blender:buildBlender,lamp:buildLamp,drill:buildDrill,pump:buildPump,fridge:buildFridge,oven:buildOven,pendant:buildPendant,ladder:buildLadder};
+// ---------- KATALOG PEMBANGKIT LISTRIK ----------
+const newR=()=>({root:new THREE.Group(),parts:[]});
+const mkQ=R=>(id,name,obj,dir,fn,how,imp,sym,gh)=>addPart(R.root,R.parts,id,name,obj,V(...dir),I(fn,how,imp,sym),gh);
+const bx=(w,h,d,c,x=0,y=0,z=0,me=.4,ro=.5)=>mesh(new THREE.BoxGeometry(w,h,d),M(c,me,ro),x,y,z);
+const cy=(r1,r2,h,c,x=0,y=0,z=0,me=.5,ro=.45)=>mesh(new THREE.CylinderGeometry(r1,r2,h,28),M(c,me,ro),x,y,z);
+const sph=(r,c,x=0,y=0,z=0,me=.3,ro=.5)=>mesh(new THREE.SphereGeometry(r,20,16),M(c,me,ro),x,y,z);
+const pp=(a,b,c=0xe5e7eb,r=.12)=>link(V(...a),V(...b),r,M(c,.8,.3));
+const Tb=(x,y,z,r,col,cas)=>{const g=grp(x,y,z),rot=new THREE.Group();rot.add(cylX(.1,2.2,STEEL()));for(let i=0;i<5;i++)rot.add(cylX(r*(.45+.1*i),.06,M(col,.9,.3),-.6+i*.3,0,0));
+ for(let k=0;k<10;k++){const a=k*Math.PI/5;rot.add(mesh(new THREE.BoxGeometry(.2,.14,.04),M(col,.9,.3),.6,Math.sin(a)*r*.9,Math.cos(a)*r*.9))}
+ const c=cylX(r,1.6,GLASS(cas,.3));c.castShadow=false;g.add(rot,c);g.userData.rot=rot;return g};
+const Gn=(x,y,z)=>{const g=grp(x,y,z),rot=new THREE.Group(),dk=()=>M(0x166534,.7,.4);rot.add(cylX(.1,2,STEEL()),cylX(.32,.6,M(0xc2763a,.9,.3)),mesh(new THREE.BoxGeometry(.1,.1,.1),M(0xffffff,.1,.5),0,.34,0));
+ const h=cylX(.6,1.2,GLASS(0x22c55e,.5));h.castShadow=false;g.add(rot,h,cylX(.62,.08,dk(),-.6),cylX(.62,.08,dk(),.6));g.userData.rot=rot;return g};
+const GEN=['Mengubah putaran poros menjadi listrik.','Rotor magnet berputar di dalam kumparan stator sehingga timbul arus listrik (induksi elektromagnetik).','Kumparan terbakar atau bearing rusak: poros berputar tetapi listrik tidak keluar.','generator rusak, tidak ada listrik'];
+const STM=['Mengubah energi uap menjadi putaran poros.','Uap bertekanan menumbuk sudu-sudu turbin bertingkat sehingga rotor berputar sangat cepat.','Sudu retak atau macet: putaran berhenti dan generator tidak menghasilkan listrik.','turbin rusak, putaran berhenti'];
+const puffs=(R,x,y,z)=>{const a=[];for(let i=0;i<4;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.25,10,10),new THREE.MeshBasicMaterial({color:0xe2e8f0,transparent:true,opacity:.5,depthWrite:false}));m.raycast=()=>{};R.root.add(m);a.push(m)}
+ return(t,on)=>a.forEach((m,i)=>{const u=(t*.4+i/4)%1;m.position.set(x+Math.sin(t+i)*.15,y+u*1.8,z);m.scale.setScalar((.5+u*1.3)*(on&&exC<.05?1:.0001));m.material.opacity=.5*(1-u)})};
+function flow(R,path,cut,spin,cam,def,col,extra){
+ const curve=new THREE.CatmullRomCurve3(path.map(p=>V(...p)),false,'centripetal'),N=48,d=new THREE.Object3D();
+ const inst=new THREE.InstancedMesh(new THREE.SphereGeometry(.08,8,8),new THREE.MeshBasicMaterial({color:col}),N);inst.raycast=()=>{};inst.frustumCulled=false;R.root.add(inst);
+ const lm=M(0x111111,0,.4,0x22ff88,2),e=path[path.length-1],lit=mesh(new THREE.SphereGeometry(.22,16,16),lm,e[0],e[1],e[2]);lit.castShadow=false;R.root.add(lit);
+ spin.forEach(s=>{s.v=0});
+ return Object.assign(R,{def,cam,update(t,dt){let c=1.01;broken.forEach(id=>{if(id in cut)c=Math.min(c,cut[id])});
+  for(let i=0;i<N;i++){const u=(i/N+t*.08)%1;d.position.copy(curve.getPointAt(u));d.scale.setScalar(u<c?1:.0001);d.updateMatrix();inst.setMatrixAt(i,d.matrix)}inst.instanceMatrix.needsUpdate=true;inst.visible=exC<.05;
+  spin.forEach(s=>{s.v+=((c>s.u?1:0)-s.v)*Math.min(1,dt*3);s.o.rotation.x+=s.v*s.k*dt});
+  lm.emissive.setHex(c>1?0x22ff88:0xff2222);lm.emissiveIntensity=c>1?2:1.2;extra&&extra(t,dt,c);}});
+}
+
+function buildHydro(){const R=newR(),Q=mkQ(R);
+ const sh=new THREE.Shape();sh.moveTo(0,0);sh.lineTo(1.6,0);sh.lineTo(.5,3.6);sh.lineTo(0,3.6);sh.closePath();
+ const dg=new THREE.ExtrudeGeometry(sh,{depth:5,bevelEnabled:false});dg.translate(-5.8,0,-2.5);
+ const dam=grp(0,0,0),wt=mesh(new THREE.BoxGeometry(4,3.2,5),GLASS(0x38bdf8,.45),-7.8,1.6,0);wt.castShadow=false;dam.add(mesh(dg,M(0x94a3b8,.1,.9,0,0,{transparent:true,opacity:.65})),wt);
+ Q('dam','Bendungan & Waduk',dam,[-2.5,0,0],'Menampung air sungai di ketinggian sehingga menyimpan energi potensial.','Makin tinggi permukaan air waduk, makin besar tekanan air yang tersedia untuk memutar turbin.','Waduk kering atau bendungan bocor: tidak ada air bertekanan dan pembangkit berhenti.','waduk kosong, tidak ada aliran air',true);
+ const pen=grp(0,0,0);pen.add(pp([-5.4,2.7,0],[-3.8,1.2,0],0x64748b,.3),pp([-3.8,1.2,0],[-2.85,.95,0],0x64748b,.3),bx(.15,.8,.9,0xF97316,-5.9,2.7,0));
+ Q('pen','Pintu Air & Penstock',pen,[0,1.6,2.2],'Mengatur dan menyalurkan air bertekanan dari waduk ke turbin.','Pintu air dibuka, lalu air meluncur lewat pipa pesat (penstock) yang menurun sehingga kecepatannya naik.','Pintu macet atau pipa bocor: air tidak sampai ke turbin dan tekanan hilang.','pintu air atau penstock rusak, aliran terhenti');
+ const tu=Tb(-2.3,.95,0,.55,0x38bdf8,0x0ea5e9);tu.rotation.z=Math.PI/2;const tw=grp(0,0,0);tw.add(tu,bx(3.2,.1,2,0x0ea5e9,-.6,.05,0,.1,.3));
+ Q('tur','Turbin Air',tw,[1.5,0,2.8],'Mengubah energi gerak air menjadi putaran poros.','Air berkecepatan tinggi menghantam sudu runner sehingga runner dan poros vertikal berputar.','Sudu aus atau macet: poros tidak berputar dan generator tidak menghasilkan listrik.','turbin air macet');
+ const gn=Gn(-2.3,2.55,0);gn.rotation.z=Math.PI/2;Q('gen','Generator',gn,[0,2.2,0],...GEN);
+ const twr=x=>{const g=new THREE.Group();[[-.6,-.5],[.6,-.5],[-.6,.5],[.6,.5]].forEach(([a,b])=>g.add(link(V(x+a,0,b),V(x,3.4,0),.04,M(0x94a3b8,.8,.4))));[3.2,2.6].forEach(y=>g.add(bx(.1,.08,2,0x94a3b8,x,y,0)));[-.9,.9].forEach(z=>g.add(cy(.05,.05,.3,0xf1f5f9,x,3.05,z)));return g};
+ const tr=grp(0,0,0);tr.add(twr(2.5),twr(6));[-.9,.9].forEach(z=>tr.add(pp([2.5,3.0,z],[6,3.0,z],0x111827,.02)));
+ Q('trans','Saluran Transmisi',tr,[0,0,-3],'Menyalurkan listrik tegangan tinggi ke kota dan industri.','Trafo menaikkan tegangan agar rugi di kabel kecil; menara menopang kawat jauh dari tanah.','Kawat putus atau menara roboh: listrik tidak sampai ke pelanggan.','saluran putus, listrik tidak tersalur');
+ return flow(R,[[-8.5,2.2,0],[-5.9,2.7,0],[-3.8,1.2,0],[-2.3,.95,0],[-2.3,2.55,0],[.5,3,0],[2.5,3.3,0],[6,3.3,0]],{dam:0,pen:.2,tur:.4,gen:.49,trans:.72},[{o:tu.userData.rot,u:.41,k:6},{o:gn.userData.rot,u:.5,k:8}],{pos:V(4,5.5,12),target:V(-1,1.8,0)},'pen',0x7dd3fc);}
+
+function buildWind(){const R=newR(),Q=mkQ(R);
+ const tw=grp(0,0,0);tw.add(cy(.2,.4,4.4,0xe5e7eb,0,2.2,0,.3,.5),cy(.7,.8,.3,0x64748b,0,.15,0),bx(.25,.5,.05,0x334155,0,.6,.38));
+ Q('tower','Menara Tinggi',tw,[0,0,-3.2],'Menopang nacelle dan rotor di ketinggian yang anginnya lebih kencang.','Angin makin kuat dan stabil di tempat tinggi; kabel listrik turun lewat bagian dalam menara.','Menara retak atau pondasi lemah: turbin goyang dan harus dimatikan.','menara rusak, turbin tidak aman');
+ const nc=grp(0,4.6,0),nh=mesh(new THREE.BoxGeometry(1.8,.8,.8),GLASS(0x94a3b8,.3));nh.castShadow=false;const gr=new THREE.Group();gr.position.set(.45,0,0);gr.add(cylX(.15,.5,M(0xc2763a,.9,.3)));
+ nc.add(nh,bx(.5,.45,.4,0xF97316,-.4,0,0),cylX(.07,.7,STEEL(),-.7,0,0),cylX(.3,.6,GLASS(0x22c55e,.6),.45,0,0),gr,cy(.35,.35,.15,0x475569,0,-.5,0));
+ Q('nac','Nacelle (Gearbox & Generator)',nc,[0,2,0],'Rumah yang menyimpan gearbox (oranye) dan generator (hijau).','Putaran lambat rotor dinaikkan gearbox menjadi cepat, lalu generator mengubahnya menjadi listrik.','Gearbox atau generator rusak: rotor berputar tetapi listrik tidak dihasilkan.','gearbox atau generator rusak',true);
+ const ro=grp(-1,4.6,0);ro.add(sph(.25,0xf1f5f9));for(let k=0;k<3;k++){const b=new THREE.Group(),bl=mesh(new THREE.BoxGeometry(.05,1.9,.25),M(0xf8fafc,.2,.4),0,1.1,0);bl.rotation.y=.3;b.add(bl);b.rotation.x=k*Math.PI*2/3;ro.add(b)}
+ Q('rotor','Baling-baling (Rotor)',ro,[-2,.6,2],'Menangkap angin dan memutar poros.','Bilah berbentuk sayap pesawat; perbedaan tekanan udara mendorong bilah sehingga rotor berputar.','Bilah patah atau retak: rotor tidak seimbang dan harus dihentikan.','bilah rotor rusak, tidak berputar');
+ const wd=grp(-3.8,4.6,0),cn=new THREE.ConeGeometry(.15,.35,12);cn.rotateZ(-Math.PI/2);wd.add(cylX(.04,1.2,M(0x7dd3fc,.1,.4,0x7dd3fc,.6)),mesh(cn,M(0x7dd3fc,.1,.4,0x7dd3fc,.6),.7,0,0));
+ const ls=[];for(let i=0;i<6;i++){const l=bx(.8,.03,.03,0xbae6fd,0,(i%3-1)*.55,(i<3?-.5:.5),.1,.4);wd.add(l);ls.push(l)}
+ Q('wind','Arah Angin (Sumber Energi)',wd,[-1,1.8,0],'Sumber energi: gerakan udara.','Angin membawa energi gerak; sensor membaca arah angin agar rotor selalu menghadap datangnya angin.','Angin terlalu lemah atau terlalu kencang: turbin diam atau dikunci demi keamanan.','tidak ada angin, rotor diam');
+ return flow(R,[[-5.3,4.6,0],[-1.2,4.6,0],[.4,4.6,0],[0,3.4,0],[0,.4,0],[4.5,.25,0]],{wind:0,rotor:.2,nac:.38,tower:.58},[{o:ro,u:.21,k:5},{o:gr,u:.39,k:12}],{pos:V(6,4,10),target:V(-.5,3.2,0)},'rotor',0xbae6fd,(t,dt,c)=>ls.forEach((l,i)=>{l.position.x=((t*1.6+i*.5)%3)-1.5;l.visible=c>0}));}
+
+function buildCoal(){const R=newR(),Q=mkQ(R);
+ const bo=grp(0,0,0),fm=M(0x1a0a05,0,.5,0xff6a00,.2),fw=mesh(new THREE.PlaneGeometry(1.1,1.2),fm,-4.5,1.2,.91);fw.userData.noHl=1;fw.castShadow=false;
+ bo.add(bx(2,3.4,1.8,0x9a3412,-4.5,1.7,0,.4,.6),fw,cylX(.4,1.6,STEEL(),-4.5,3.7,0));
+ Q('boiler','Boiler / Tungku Pembakaran',bo,[-1.5,1.2,0],'Membakar batu bara dan memanaskan air menjadi uap bertekanan tinggi.','Panas pembakaran merambat ke pipa-pipa berisi air hingga mendidih menjadi uap.','Pipa bocor atau api padam: uap tidak terbentuk dan pembangkit berhenti.','boiler rusak, uap tidak terbentuk');
+ const st=grp(0,0,0);st.add(cy(.35,.55,4.8,0x6b7280,-6.4,2.4,0),cy(.57,.57,.3,0xdc2626,-6.4,4.5,0),bx(1,.4,.4,0x6b7280,-5.95,1,0));
+ Q('stack','Cerobong Asap',st,[-2.2,0,0],'Membuang gas hasil pembakaran ke udara yang tinggi.','Gas panas naik karena lebih ringan; ketinggian cerobong membantu menyebarkannya.','Cerobong tersumbat: gas balik dan boiler harus dimatikan.','cerobong tersumbat, boiler mati');
+ const pi=grp(0,0,0);pi.add(pp([-4.5,3.7,0],[-3,3.7,0],0xe5e7eb,.13),pp([-3,3.7,0],[-1.3,2,0],0xe5e7eb,.13),pp([-1.3,2,0],[-1,1.5,0],0xe5e7eb,.13));
+ Q('pipe','Pipa Uap',pi,[0,1.8,0],'Menyalurkan uap panas bertekanan ke turbin.','Pipa berinsulasi menjaga uap tetap panas dan bertekanan sampai ke turbin.','Pipa bocor: tekanan turun dan sangat berbahaya.','pipa uap bocor, tekanan turun');
+ const tu=Tb(-1,1.4,0,.7,0xcbd5e1,0x94a3b8);Q('tur','Turbin Uap',tu,[0,0,2.4],...STM);
+ const cd=grp(0,0,0);cd.add(bx(2.2,.7,1.4,0x1d4ed8,-1,.4,0),cylX(.07,2.3,M(0x60a5fa,.8,.3),-1,.2,.72),cylX(.07,2.3,M(0x60a5fa,.8,.3),-1,.55,.72));
+ Q('cond','Kondensor',cd,[0,0,-2.4],'Mengembunkan uap bekas menjadi air agar dipakai ulang.','Uap bekas dialirkan melewati pipa dingin sehingga mengembun dan tekanan di belakang turbin turun.','Kondensor bocor atau tersumbat: uap menumpuk dan turbin kehilangan daya.','kondensor gagal, turbin kehilangan daya');
+ const gn=Gn(1,1.4,0);Q('gen','Generator',gn,[1.8,1,0],...GEN);const sm=puffs(R,-6.4,4.9,0);
+ return flow(R,[[-4.5,.5,0],[-4.5,3.5,0],[-3,3.7,0],[-1.3,2,0],[-1,1.4,0],[1,1.4,0],[4,1.4,0]],{boiler:.15,stack:.15,pipe:.45,tur:.58,cond:.58,gen:.74},[{o:tu.userData.rot,u:.6,k:10},{o:gn.userData.rot,u:.76,k:10}],{pos:V(5,5,12),target:V(-1.2,2,0)},'boiler',0xfde68a,(t,dt,c)=>{fm.emissiveIntensity=c>.15?.8+.4*Math.sin(t*6):.05;sm(t,c>.15)});}
+
+function buildGU(){const R=newR(),Q=mkQ(R);
+ const cg=new THREE.CylinderGeometry(.85,.5,1.6,28,1,true);cg.rotateZ(Math.PI/2);const cmp=grp(-5,1.2,0),cr=new THREE.Group();cr.add(cylX(.1,2,STEEL()));[.7,.62,.54,.47,.42].forEach((r,i)=>cr.add(cylX(r,.05,M(0x93c5fd,.9,.3),-.55+i*.28,0,0)));
+ const cc=mesh(cg,GLASS(0x60a5fa,.35));cc.castShadow=false;cmp.add(cr,cc);cmp.userData.rot=cr;
+ Q('comp','Kompresor Udara',cmp,[-2,0,2],'Menekan udara luar sampai bertekanan tinggi.','Sudu bertingkat memampatkan udara sehingga lebih padat dan siap dibakar.','Sudu kotor atau rusak: udara kurang dan pembakaran lemah.','kompresor rusak, tekanan udara rendah');
+ const cb=grp(-3.8,1.2,0),fm=M(0x331100,0,.5,0xff7a00,1),fl=mesh(new THREE.SphereGeometry(.3,16,16),fm);fl.userData.noHl=1;fl.castShadow=false;cb.add(cylX(.55,1.1,GLASS(0xf97316,.35)),fl);
+ Q('cb','Ruang Bakar Gas',cb,[-.5,2,0],'Membakar bahan bakar gas bersama udara bertekanan.','Gas disemprot dan dinyalakan; gas panas bertekanan tinggi keluar menuju turbin.','Api padam atau nozel buntu: gas panas tidak terbentuk.','api ruang bakar padam');
+ const gt=Tb(-2.6,1.2,0,.55,0xf97316,0xfb923c);Q('gt','Turbin Gas',gt,[0,0,2.6],'Mengubah gas panas menjadi putaran.','Gas panas memuai dan menumbuk sudu turbin sehingga poros berputar sambil memutar kompresor.','Sudu retak karena panas: turbin berhenti dan poros bisa rusak.','turbin gas rusak');
+ const hr=grp(0,0,0),hb=mesh(new THREE.BoxGeometry(2.2,2.4,1.4),GLASS(0x94a3b8,.3),-1,1.3,-3);hb.castShadow=false;hr.add(hb);for(let i=0;i<5;i++)hr.add(cylX(.06,1.8,M(i%2?0x38bdf8:0xef4444,.8,.3),-1,.6+i*.4,-3.2));
+ hr.add(cy(.3,.4,1.6,0x6b7280,-1,3.3,-3),pp([-2.6,1.2,-.5],[-1.9,1.3,-2.5],0x64748b,.3),pp([-.2,2.2,-2.8],[.5,1.6,-.6],0xf1f5f9,.12));
+ Q('hrsg','HRSG (Penangkap Panas Sisa)',hr,[0,1.5,-1.5],'Menangkap panas gas buang untuk membuat uap tanpa bahan bakar tambahan.','Gas buang yang masih sangat panas melewati pipa berisi air (merah=panas, biru=air) sehingga air menjadi uap.','Pipa bocor atau tersumbat: panas terbuang dan uap tidak terbentuk.','HRSG rusak, panas sisa terbuang',true);
+ const stt=Tb(.5,1.2,0,.6,0x38bdf8,0x94a3b8);Q('st','Turbin Uap',stt,[0,0,2.6],'Menambah daya dari uap hasil panas sisa.','Uap dari HRSG memutar turbin uap pada poros yang sama dengan turbin gas.','Turbin uap rusak: efisiensi turun dan hanya turbin gas yang bekerja.','turbin uap rusak, efisiensi turun');
+ const gn=Gn(2.6,1.2,0);Q('gen','Generator',gn,[2.6,1,0],...GEN);const sm=puffs(R,-1,4.2,-3);
+ return flow(R,[[-6.4,1.2,0],[-5,1.2,0],[-3.8,1.2,0],[-2.6,1.2,0],[-2,1.2,-1.5],[-1,1.3,-3],[.3,1.2,-1.5],[.5,1.2,0],[2.5,1.2,0],[5,1.2,0]],{comp:.05,cb:.15,gt:.22,hrsg:.45,st:.68,gen:.8},[{o:cr,u:.07,k:9},{o:gt.userData.rot,u:.23,k:11},{o:stt.userData.rot,u:.69,k:11},{o:gn.userData.rot,u:.81,k:11}],{pos:V(6,5,11),target:V(-1,1.5,-.5)},'cb',0xfdba74,(t,dt,c)=>{fm.emissiveIntensity=c>.15?.8+.5*Math.sin(t*9):.05;fl.scale.setScalar(c>.15?1+.15*Math.sin(t*9):.4);sm(t,c>.45)});}
+
+function buildGeo(){const R=newR(),Q=mkQ(R);
+ const wl=grp(0,0,0),eg=mesh(new THREE.BoxGeometry(12.5,3,3),GLASS(0x78350f,.28),-.75,-1.5,0);eg.castShadow=false;const mgM=M(0x7f1d1d,0,.5,0xff3b00,1.2),mg=mesh(new THREE.BoxGeometry(4,.5,2.4),mgM,-5.5,-2.75,0);mg.userData.noHl=1;
+ wl.add(eg,mg,cy(.12,.12,3.3,0xef4444,-5.5,-1,0),cy(.12,.12,3,0x3b82f6,4.8,-1.4,0),bx(.5,.3,.5,0x475569,-5.5,.15,0),bx(.5,.3,.5,0x475569,4.8,.15,0));
+ Q('wells','Sumur Produksi & Injeksi',wl,[0,-1.4,0],'Mengambil uap panas dari bawah tanah dan mengembalikan air bekas.','Sumur produksi (merah) mengalirkan uap/air panas dari reservoir; air yang sudah dingin disuntikkan kembali lewat sumur injeksi (biru).','Sumur tersumbat atau reservoir menurun: pasokan uap berkurang.','sumur tersumbat, pasokan uap turun',true);
+ const sp=grp(0,0,0);sp.add(cy(.6,.6,1.8,0xcbd5e1,-4.2,.9,0,.8,.3),mesh(new THREE.SphereGeometry(.6,20,10,0,Math.PI*2,0,Math.PI/2),M(0xcbd5e1,.8,.3),-4.2,1.8,0),pp([-5.5,.6,0],[-4.6,1.4,0],0xef4444,.12),pp([-3.8,1.4,0],[-2.4,1.2,0],0xe5e7eb,.12));
+ Q('sep','Separator Uap',sp,[-1,1.2,0],'Memisahkan uap dari air panas.','Campuran uap dan air berputar di separator; uap naik ke turbin, air jatuh ke bawah.','Separator bocor: air ikut ke turbin dan merusak sudu.','separator rusak, uap tercampur air');
+ const tu=Tb(-1.6,1.2,0,.55,0xcbd5e1,0x94a3b8);Q('tur','Turbin Uap Panas Bumi',tu,[0,0,2.4],...STM);const gn=Gn(.4,1.2,0);Q('gen','Generator',gn,[1.5,1.5,0],...GEN);
+ const ct=grp(0,0,0),lp=[[1.1,0],[.9,1],[.75,2],[.85,3],[1,3.4]].map(p=>new THREE.Vector2(p[0],p[1]));ct.add(mesh(new THREE.LatheGeometry(lp,36),M(0xcbd5e1,.1,.8,0,0,{side:THREE.DoubleSide})),pp([1,.3,0],[2.5,.3,0],0x3b82f6,.1));ct.position.x=3.4;
+ Q('cool','Menara Pendingin',ct,[1.5,0,-2.4],'Mendinginkan uap bekas menjadi air.','Air hangat dialirkan ke menara; sebagian menguap sehingga air menjadi dingin dan bisa disuntikkan kembali ke tanah.','Menara rusak: uap bekas tidak mengembun dan turbin kehilangan daya.','menara pendingin rusak');
+ const sm=puffs(R,3.4,3.4,0);
+ return flow(R,[[-5.5,-2.5,0],[-5.5,.6,0],[-4.4,1.4,0],[-2.8,1.2,0],[-1.6,1.2,0],[.4,1.2,0],[1.8,1.2,0]],{wells:.1,sep:.4,cool:.66,tur:.66,gen:.83},[{o:tu.userData.rot,u:.68,k:10},{o:gn.userData.rot,u:.87,k:10}],{pos:V(6,3.5,11),target:V(-1,.6,0)},'sep',0xfca5a5,(t,dt,c)=>{mgM.emissiveIntensity=1+.4*Math.sin(t*2);sm(t,c>.66)});}
+
+function buildNuke(){const R=newR(),Q=mkQ(R);
+ const dm=grp(0,0,0),dc=new THREE.CylinderGeometry(2.4,2.4,2.4,36,1,true),dmm=GLASS(0xcbd5e1,.25),a=mesh(dc,dmm,-3,1.2,0),b=mesh(new THREE.SphereGeometry(2.4,36,18,0,Math.PI*2,0,Math.PI/2),dmm,-3,2.4,0);a.castShadow=b.castShadow=false;dm.add(a,b,cy(2.5,2.5,.15,0x6b7280,-3,.07,0));
+ Q('dome','Kubah Kontainmen',dm,[0,2.8,0],'Cangkang beton tebal sebagai pelindung terakhir.','Dome menahan tekanan dan mencegah zat radioaktif keluar bila terjadi kecelakaan.','Retak: risiko kebocoran radiasi dan reaktor harus dimatikan.','kontainmen retak, reaktor dimatikan',true);
+ const rv=grp(0,0,0),vs=mesh(new THREE.CylinderGeometry(.8,.8,2,28),GLASS(0x64748b,.5),-4,1.1,0);vs.castShadow=false;rv.add(vs,mesh(new THREE.SphereGeometry(.8,20,10,0,Math.PI*2,0,Math.PI/2),GLASS(0x64748b,.5),-4,2.1,0),mesh(new THREE.CylinderGeometry(1.15,1.15,2.2,36,1,true),M(0x9ca3af,.1,.9,0,0,{side:THREE.DoubleSide}),-4,1.1,0),cy(1.3,1.3,.2,0x6b7280,-4,.1,0));
+ Q('reactor','Reaktor & Pelindung Beton',rv,[0,0,2.6],'Bejana baja berpelindung beton tebal yang menampung teras.','Dinding tebal menahan tekanan air panas dan menahan radiasi agar tidak keluar.','Retak atau kehilangan air pendingin: teras bisa terlalu panas dan reaktor dimatikan.','bejana reaktor rusak, reaktor dimatikan',true);
+ const co=grp(-4,1.1,0),cm=M(0x042f2e,0,.4,0x22d3ee,1),cc=mesh(new THREE.CylinderGeometry(.5,.5,1.2,24),cm);cc.userData.noHl=1;co.add(cc);const rods=new THREE.Group();[[.25,0],[-.25,0],[0,.25],[0,-.25],[0,0]].forEach(([x,z])=>rods.add(cy(.05,.05,1.6,0xfacc15,x,.5,z,.5,.4)));co.add(rods);
+ Q('core','Teras & Batang Kendali',co,[0,2.2,0],'Tempat reaksi fisi uranium serta batang kendali (kuning) pengatur reaksi.','Uranium membelah dan melepas panas; batang kendali penyerap neutron dimasukkan untuk memperlambat atau menghentikan reaksi.','Batang kendali macet: reaksi sulit dikendalikan sehingga reaktor dimatikan darurat (SCRAM).','batang kendali bermasalah, SCRAM');
+ const lo=grp(0,0,0);lo.add(cy(.5,.5,2.4,0xF97316,-2,1.4,0),mesh(new THREE.SphereGeometry(.5,16,8,0,Math.PI*2,0,Math.PI/2),M(0xF97316,.5,.4),-2,2.6,0),pp([-3.4,1.6,0],[-2.2,1.9,0],0xef4444,.14),pp([-2.2,.6,0],[-3.4,.6,0],0x3b82f6,.14),sph(.25,0x1d4ed8,-2.8,.6,0),pp([-2,3,0],[-.6,2.3,0],0xf1f5f9,.12),pp([-.6,2.3,0],[2.4,1.8,0],0xf1f5f9,.12));
+ Q('loop','Sirkuit Pendingin & Uap',lo,[0,0,-2.6],'Memindahkan panas dari teras ke pembangkit uap lalu ke turbin.','Air bertekanan (merah panas, biru dingin) membawa panas ke pembangkit uap yang membuat uap di sirkuit terpisah.','Pompa atau pipa rusak: panas tidak terbawa dan reaktor harus dimatikan.','sirkuit pendingin rusak, reaktor dimatikan');
+ const tu=Tb(3.2,1.2,0,.6,0xcbd5e1,0x94a3b8);Q('tur','Turbin Uap',tu,[0,1,2.2],...STM);const gn=Gn(5.2,1.2,0);Q('gen','Generator',gn,[1.8,.8,0],...GEN);
+ let ry=0;
+ return flow(R,[[-4,1.1,0],[-3,1.7,0],[-2,1.4,0],[-2,2.7,0],[1,2.3,0],[2.4,1.8,0],[3.2,1.2,0],[5.2,1.2,0],[7.4,1.2,0]],{dome:.05,reactor:.08,core:.05,loop:.3,tur:.67,gen:.83},[{o:tu.userData.rot,u:.69,k:10},{o:gn.userData.rot,u:.85,k:10}],{pos:V(6,5,12),target:V(.8,1.6,0)},'core',0x67e8f9,(t,dt,c)=>{cm.emissiveIntensity=c>.08?.9+.3*Math.sin(t*3):.1;ry+=((c<.3?-.8:.05*Math.sin(t))-ry)*Math.min(1,dt*3);rods.position.y=ry});}
+
+function buildDiesel(){const R=newR(),Q=mkQ(R);
+ const en=grp(0,0,0),rods=[];en.add(bx(7,.15,1.7,0x374151,.3,.08,0),bx(2.4,1.2,1.2,0x15803d,-.8,.75,0));
+ for(let i=0;i<4;i++){en.add(bx(.4,.35,.9,0x14532d,-1.55+i*.5,1.5,0,.5,.4));const r=cy(.08,.08,.3,0xe5e7eb,-1.55+i*.5,1.8,0,.9,.3);en.add(r);rods.push(r)}
+ const fl=new THREE.Group();fl.position.set(.55,.8,0);fl.add(cylX(.42,.12,M(0x64748b,.8,.3)),bx(.1,.7,.1,0xF97316));en.add(fl,cy(.1,.1,1.4,0x6b7280,-.1,2.3,0));
+ Q('eng','Mesin Diesel Silinder',en,[0,1.6,0],'Membakar solar untuk menghasilkan putaran.','Piston memampatkan udara hingga panas; solar disemprot lalu terbakar sendiri dan mendorong piston naik-turun memutar poros.','Injektor atau piston rusak: mesin tersendat atau mati.','mesin diesel rusak');
+ const rd=grp(0,0,0),fan=new THREE.Group();fan.position.set(-2.45,1,0);for(let k=0;k<4;k++){const b=new THREE.Group();b.add(bx(.04,.9,.18,0x94a3b8,0,.5,0));b.rotation.x=k*Math.PI/2;fan.add(b)}
+ const sh=mesh(new THREE.TorusGeometry(.55,.04,8,32),M(0x1f2937,.5,.4),-2.45,1,0);sh.rotation.y=Math.PI/2;rd.add(bx(.25,1.6,1.8,0x0f766e,-3,1,0),fan,sh,pp([-2.9,1.6,.5],[-2,1.4,.5],0x3b82f6,.07));for(let i=0;i<6;i++)rd.add(bx(.05,.04,1.8,0x99f6e4,-3.17,.4+i*.24,0));
+ Q('rad','Radiator & Kipas Pendingin',rd,[-2.2,0,0],'Mendinginkan mesin.','Air pendingin menyerap panas mesin lalu didinginkan oleh aliran udara kipas di radiator.','Bocor atau kipas rusak: mesin overheat dan mati.','radiator bocor, mesin overheat');
+ const tk=grp(0,0,0);tk.add(cylX(.6,2.2,M(0xeab308,.4,.5),-.8,.9,-2.1),bx(.2,.3,1,0x374151,-1.6,.15,-2.1),bx(.2,.3,1,0x374151,0,.15,-2.1),sph(.12,0x1f2937,-.8,1.5,-2.1),pp([-.8,.9,-1.5],[-.8,.9,-.6],0x1f2937,.05));
+ Q('tank','Tangki Bahan Bakar',tk,[0,1.2,-2.2],'Menyimpan solar.','Solar mengalir lewat filter dan pompa menuju injektor mesin.','Kosong atau saluran tersumbat: mesin kehabisan bahan bakar dan mati.','tangki kosong, mesin mati');
+ const gn=Gn(2,.9,0);Q('alt','Alternator / Generator',gn,[2.2,.6,0],...GEN);const ph={rotation:{x:0}},sm=puffs(R,-.1,3,0);
+ return flow(R,[[-.8,.9,-2.1],[-.8,.9,-.8],[-.8,.9,0],[1,.9,0],[2,.9,0],[4.2,.9,0]],{tank:.05,eng:.3,rad:.3,alt:.66},[{o:fl,u:.31,k:9},{o:ph,u:.31,k:9},{o:fan,u:.31,k:12},{o:gn.userData.rot,u:.69,k:9}],{pos:V(5,4,9),target:V(-.2,1.1,-.2)},'tank',0xfde047,(t,dt,c)=>{rods.forEach((r,i)=>r.position.y=1.8+.12*Math.sin(ph.rotation.x+i*1.6));sm(t,c>.3)});}
+
+function buildBio(){const R=newR(),Q=mkQ(R);
+ const dg=grp(0,0,0),vs=mesh(new THREE.CylinderGeometry(1.3,1.3,2.6,36),GLASS(0x65a30d,.3),-4.2,1.3,0);vs.castShadow=false;
+ dg.add(vs,mesh(new THREE.CylinderGeometry(1.2,1.2,1.5,32),M(0x78350f,.1,.8,0,0,{transparent:true,opacity:.85}),-4.2,.85,0),mesh(new THREE.SphereGeometry(1.3,32,12,0,Math.PI*2,0,Math.PI/2),M(0x94a3b8,.5,.4),-4.2,2.6,0),cy(.6,.25,.6,0x92400e,-6.1,1.8,0),pp([-5.9,1.5,0],[-5.4,1.2,0],0x92400e,.15));
+ const bb=[];for(let i=0;i<6;i++){const m=mesh(new THREE.SphereGeometry(.08,8,8),new THREE.MeshBasicMaterial({color:0xfef08a}),-4.2+Math.cos(i*2.1)*.6,.5,Math.sin(i*2.1)*.6);m.userData.noHl=1;m.userData.skip=1;m.raycast=()=>{};dg.add(m);bb.push(m)}
+ Q('dig','Digester Fermentasi',dg,[-2,0,0],'Mengurai limbah organik (kotoran, sisa makanan) menjadi biogas tanpa oksigen.','Bakteri memfermentasi bahan organik dan menghasilkan gas metana (biogas) yang terkumpul di kubah atas.','Bocor atau bakteri mati: gas berkurang dan bau menyebar.','digester bocor, produksi gas turun',true);
+ const gs=grp(0,0,0);gs.add(pp([-4.2,3.9,0],[-3,4.1,0],0xfde047,.1),pp([-3,4.1,0],[-1.6,2.45,0],0xfde047,.1),cy(.4,.4,1.4,0x84cc16,-1.6,.8,0),sph(.5,0xfde68a,-1.6,2,0,.1,.6),pp([-1.2,.9,0],[-.7,.9,0],0xfde047,.1));
+ Q('gas','Pipa Gas & Tabung Penampung',gs,[0,1.6,0],'Mengalirkan dan membersihkan biogas.','Pipa membawa gas ke tabung penampung dan filter agar bersih sebelum dibakar.','Pipa bocor: gas hilang dan mudah terbakar.','pipa gas bocor');
+ const en=grp(0,0,0),fw=new THREE.Group();fw.position.set(.95,.9,0);fw.add(cylX(.42,.12,M(0x64748b,.8,.3)),bx(.1,.7,.1,0xF97316));en.add(bx(1.4,1,1,0xF97316,.1,.9,0),fw,cy(.2,.2,.4,0x1f2937,-.3,1.6,0),cy(.2,.2,.4,0x1f2937,.3,1.6,0),cy(.07,.07,1.2,0x6b7280,.1,2.2,0));
+ Q('eng','Mesin Gas / Turbin',en,[0,0,2.4],'Membakar biogas untuk memutar poros.','Biogas dibakar di silinder mesin gas; ledakan menggerakkan piston dan memutar poros.','Mesin rusak: gas terbuang dan generator berhenti.','mesin gas rusak');
+ const gn=Gn(2.3,.9,0);Q('gen','Generator',gn,[1.8,.8,0],...GEN);
+ return flow(R,[[-4.2,1,0],[-4.2,3.9,0],[-3,4.1,0],[-1.6,1.4,0],[.1,.9,0],[2.2,.9,0],[4.4,.9,0]],{dig:.08,gas:.4,eng:.66,gen:.82},[{o:fw,u:.68,k:9},{o:gn.userData.rot,u:.85,k:9}],{pos:V(5,4.5,10),target:V(-.5,1.6,0)},'gas',0xfef08a,(t,dt,c)=>bb.forEach((m,i)=>{const u=(t*.5+i/6)%1;m.position.y=.3+u*1.7;m.visible=c>.08}));}
+
+function buildWave(){const R=newR(),Q=mkQ(R);
+ const se=grp(0,0,0),vol=mesh(new THREE.BoxGeometry(10,2.4,5),GLASS(0x0369a1,.35),-1,1.2,0);vol.castShadow=false;
+ const pg=new THREE.PlaneGeometry(10,5,40,20),pm=mesh(pg,M(0x38bdf8,.2,.25,0,0,{transparent:true,opacity:.7,side:THREE.DoubleSide}),-1,2.4,0);pm.rotation.x=-Math.PI/2;pm.castShadow=false;se.add(vol,pm);
+ Q('sea','Gelombang Laut (Sumber Energi)',se,[0,0,-3.2],'Sumber energi: gelombang laut.','Angin membuat gelombang yang membawa energi gerak naik-turun.','Laut tenang: pelampung hampir diam dan energi hampir nol.','gelombang kecil, energi rendah',true);
+ const bu=grp(0,2.4,0),tg=new THREE.TorusGeometry(.8,.35,16,32);tg.rotateX(Math.PI/2);bu.add(mesh(tg,M(0xF97316,.3,.5)),cy(.06,.06,.7,0x475569,.6,.5,0),sph(.1,0xfde047,.6,.9,0));
+ const pb=Q('buoy','Pelampung (Buoy)',bu,[0,1.2,2.6],'Pelampung yang naik-turun mengikuti gelombang.','Gaya apung mengangkat pelampung saat gelombang naik dan menurunkannya saat gelombang turun.','Bocor atau tenggelam: tidak ada gerak yang bisa dimanfaatkan.','pelampung rusak, tidak bergerak');
+ const pt=grp(0,0,0),rod=cy(.2,.2,1.4,0xeab308,0,3,0,.8,.3);pt.add(cy(.9,1,.2,0x475569,0,.1,0),cy(.12,.12,4.2,0xe5e7eb,0,2.1,0),rod);
+ Q('pto','Mekanisme Piston (PTO)',pt,[-2.4,0,0],'Mengubah gerak naik-turun menjadi gerak yang bisa diubah menjadi listrik.','Selongsong piston (kuning) terhubung ke pelampung dan meluncur lurus pada rel pemandu.','Macet atau patah: gerakan tidak sampai ke generator.','mekanisme piston macet');
+ const gm=M(0x111111,0,.4,0x22ff88,0),gg=grp(0,4.2,0),gh=mesh(new THREE.CylinderGeometry(.45,.45,1,24),GLASS(0x22c55e,.45));gh.castShadow=false;gg.add(gh);[-.25,0,.25].forEach(y=>{const c=mesh(new THREE.TorusGeometry(.47,.05,8,24),gm,0,y,0);c.rotation.x=Math.PI/2;c.userData.noHl=1;gg.add(c)});
+ Q('gen','Generator Linear',gg,[0,2,0],'Mengubah gerak naik-turun batang magnet menjadi listrik.','Batang magnet bergerak melewati kumparan sehingga timbul arus listrik.','Kumparan rusak: tidak ada listrik walau pelampung bergerak.','generator rusak, tidak ada listrik');
+ return flow(R,[[-4,2.6,0],[-.6,2.5,0],[0,3.4,0],[0,4.3,0],[2.5,3.8,0],[5,2.6,0]],{sea:0,buoy:.2,pto:.35,gen:.46},[],{pos:V(6,4.5,9),target:V(0,2.6,0)},'buoy',0x7dd3fc,(t,dt,c)=>{
+  const A=broken.has('sea')?.12:1,ab=broken.has('buoy')?0:A,ar=broken.has('pto')?0:ab,pa=pg.attributes.position;
+  for(let i=0;i<pa.count;i++)pa.setZ(i,.45*A*Math.sin(1.2*(pa.getX(i)-1)-2*t));pa.needsUpdate=true;
+  pb.base.y=2.4-.45*ab*Math.sin(2*t);rod.position.y=3-.45*ar*Math.sin(2*t);gm.emissiveIntensity=c>.46?Math.abs(Math.cos(2*t))*2*ar:0;});}
+
+function buildWaste(){const R=newR(),Q=mkQ(R);
+ const bk=grp(0,0,0);bk.add(bx(2.4,.15,2.2,0x374151,-5.8,.08,0),bx(.15,1.5,2.2,0x374151,-7,.8,0),bx(2.4,1.5,.15,0x374151,-5.8,.8,-1.1),bx(2.4,1.5,.15,0x374151,-5.8,.8,1.1),bx(2.6,.1,.1,0x6b7280,-5.8,2.6,0),pp([-5.6,2.6,0],[-5.6,1.7,0],0x6b7280,.03),sph(.2,0xF97316,-5.6,1.6,0),cy(.55,.2,.7,0x7c2d12,-4.6,1.8,0));
+ for(let i=0;i<10;i++){const s=Math.sin(i*12.9)*.5+.5,s2=Math.cos(i*7.3)*.5+.5;bk.add(bx(.5+s*.4,.4+s2*.4,.5+s*.3,[0x78716c,0x65a30d,0x2563eb,0xa16207][i%4],-6.4+(i%5)*.45,.4+Math.floor(i/5)*.35,-.5+s2,.1,.9))}
+ Q('bunker','Bunker Sampah & Crane',bk,[-2,0,0],'Menampung dan mengumpulkan sampah sebelum dibakar.','Crane mengambil sampah dari bunker lalu menjatuhkannya ke corong tungku secara teratur.','Bunker penuh atau crane macet: umpan sampah ke tungku berhenti.','bunker atau crane rusak, umpan terhenti');
+ const fm=M(0x1a0a05,0,.5,0xff5a00,.5),fw=mesh(new THREE.PlaneGeometry(1,.6),fm,-3.9,.6,.81);fw.userData.noHl=1;fw.castShadow=false;const fu=grp(0,0,0);fu.add(bx(1.6,1.2,1.6,0x7f1d1d,-3.9,.7,0,.3,.7),fw);
+ Q('furnace','Tungku Insinerasi',fu,[-1,1.6,0],'Membakar sampah pada suhu sangat tinggi.','Sampah bergerak di atas grate sambil diberi udara; pembakaran di atas 850 derajat membuat sampah habis jadi abu.','Grate macet atau api padam: sampah tidak terbakar dan panas tidak terbentuk.','tungku padam, sampah tidak terbakar');
+ const bo=grp(0,0,0);bo.add(bx(1.2,3.2,1.4,0x1d4ed8,-2.2,1.6,0),cylX(.3,1,STEEL(),-2.2,3.4,0),pp([-2.2,3.3,-.2],[-2.4,2.1,-2.9],0xe5e7eb,.12));
+ Q('boiler','Boiler Uap',bo,[0,0,2.4],'Mengubah panas pembakaran menjadi uap.','Gas panas mengalir melewati pipa-pipa berisi air sehingga air mendidih menjadi uap bertekanan.','Pipa bocor: uap berkurang dan tekanan turun.','boiler rusak, uap berkurang');
+ const bg=mesh(new THREE.BoxGeometry(1.6,1.8,1.4),GLASS(0x94a3b8,.3),.1,.9,0);bg.castShadow=false;const fl=grp(0,0,0);fl.add(bg,pp([-1.6,.7,0],[-.7,.7,0],0x6b7280,.2),pp([.9,.7,0],[1.4,.7,0],0x6b7280,.2),cy(.5,.5,2.2,0x86efac,1.8,1.1,0),pp([2.3,.9,0],[3,.9,0],0x6b7280,.2),cy(.25,.35,4.4,0x6b7280,3.1,2.2,0));for(let i=0;i<6;i++)fl.add(cy(.08,.08,1.3,0xe5e7eb,-.5+i*.25,.9,0,.1,.8));
+ Q('filter','Penyaring Emisi & Cerobong',fl,[2.2,.8,1.2],'Membersihkan gas buang sebelum keluar cerobong.','Filter kantong menangkap debu dan scrubber (hijau) menetralkan gas asam agar udara tetap aman.','Filter jebol: emisi berbahaya dan pembangkit harus dihentikan.','filter emisi jebol, pembangkit dihentikan');
+ const tu=Tb(-2.4,1.3,-3,.6,0xcbd5e1,0x94a3b8);Q('tur','Turbin Uap',tu,[0,1.2,-1],...STM);const gn=Gn(-.4,1.3,-3);Q('gen','Generator',gn,[1.8,1.2,-1],...GEN);const sm=puffs(R,3.1,4.5,0);
+ return flow(R,[[-6,1,0],[-3.9,1,0],[-2.2,2,0],[-2.2,3.2,0],[-2.4,2,-1.6],[-2.4,1.3,-3],[-.4,1.3,-3],[2.2,1.3,-3]],{bunker:.05,furnace:.2,filter:.2,boiler:.35,tur:.64,gen:.79},[{o:tu.userData.rot,u:.66,k:10},{o:gn.userData.rot,u:.81,k:10}],{pos:V(5,5.5,12),target:V(-1.5,1.8,-1)},'furnace',0xfdba74,(t,dt,c)=>{fm.emissiveIntensity=c>.2?.8+.4*Math.sin(t*7):.05;sm(t,c>.2)});}
+
+const MODELS={engine:buildEngine,solar:buildSolar,motor:buildMotor,fan:buildFan,washer:buildWasher,iron:buildIron,blender:buildBlender,lamp:buildLamp,drill:buildDrill,pump:buildPump,fridge:buildFridge,oven:buildOven,pendant:buildPendant,ladder:buildLadder,hydro:buildHydro,wind:buildWind,coal:buildCoal,gu:buildGU,geo:buildGeo,nuke:buildNuke,diesel:buildDiesel,bio:buildBio,wave:buildWave,waste:buildWaste};
 const broken=new Set();let model=null,mode='normal',sel=null,hover=null,exT=0,exC=0;
 function setGoalToSel(){if(sel)tgtGoal=sel.base.clone().addScaledVector(sel.dir,exT).add(sel.obj.parent?sel.obj.parent.position:V(0,0,0));}
 function refreshUI(){
